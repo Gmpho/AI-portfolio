@@ -1,0 +1,505 @@
+# AI-Powered Portfolio Setup Request
+
+## Project Overview
+I need to create an AI-powered portfolio website with a self-learning career coach chatbot. The portfolio should showcase my projects and provide AI-powered career guidance to visitors.
+
+## Technical Stack
+- **Frontend**: Vite + React + TypeScript
+- **Styling**: Tailwind CSS
+- **AI Services**: OpenAI, Notion API, Pinecone, Ollama (for offline capabilities)
+- **Deployment**: GitHub Pages with GitHub Actions CI/CD
+
+## Repository Structure
+
+
+AI-portfolio/
+├── src/
+│ ├── components/
+│ │ ├── ChatBot.tsx
+│ │ ├── ProjectCard.tsx
+│ │ └── ThemeToggle.tsx
+│ ├── services/
+│ │ ├── openaiService.ts
+│ │ ├── notionService.ts
+│ │ ├── pineconeService.ts
+│ │ └── ollamaService.ts
+│ ├── hooks/
+│ │ └── useChat.ts
+│ ├── types/
+│ │ ├── project.d.ts
+│ │ └── chat.d.ts
+│ ├── utils/
+│ │ └── ollamaUtils.ts
+│ ├── App.tsx
+│ ├── main.tsx
+│ └── vite-env.d.ts
+├── public/
+│ └── index.html
+├── .github/
+│ └── workflows/
+│ └── deploy.yml
+├── package.json
+├── tsconfig.json
+├── vite.config.ts
+└── README.md
+
+
+
+
+## Setup Instructions
+
+### Phase 1: Project Initialization
+1. Initialize a new Vite project with React TypeScript template
+2. Install required dependencies:
+   - UI: Tailwind CSS, React Icons
+   - AI Services: OpenAI, @notionhq/client, @pinecone-database/pinecone
+   - Utilities: pdf-js for resume parsing
+3. Set up basic project structure with folders for components, services, hooks, types, and utils
+
+### Phase 2: Configuration Files
+1. Create Vite configuration (vite.config.ts) with base path for GitHub Pages
+2. Set up TypeScript configuration (tsconfig.json)
+3. Configure Tailwind CSS (tailwind.config.js, postcss.config.js)
+4. Create environment variables template (.env.example)
+
+### Phase 3: Core Components
+1. Create a responsive layout with header, project grid, and chatbot interface
+2. Implement dark/light theme toggle with localStorage persistence
+3. Build project cards with hover effects and technology badges
+4. Create chatbot modal with message history and input field
+
+### Phase 4: AI Services Integration
+1. Set up OpenAI service for generating AI responses
+2. Implement Notion API integration for project data management
+3. Configure Pinecone vector database for storing and retrieving project information
+4. Add Ollama service for offline AI capabilities
+
+### Phase 5: Self-Learning Chatbot
+1. Implement conversation history tracking
+2. Create skill extraction from user messages
+3. Build user profile system that evolves based on interactions
+4. Add job matching algorithm based on extracted skills and preferences
+
+### Phase 6: Deployment Setup
+1. Create GitHub Actions workflow for automatic deployment to GitHub Pages
+2. Configure build process with environment variables
+3. Set up proper base paths for GitHub Pages deployment
+
+## Key Features to Implement
+1. **Responsive Design**: Mobile-first approach with Tailwind CSS
+2. **Theme System**: Dark/light mode with system preference detection
+3. **Project Showcase**: Grid layout with project cards and technology tags
+4. **AI Chatbot**: 
+   - Self-learning capabilities that adapt to user interactions
+   - Career guidance based on user skills and preferences
+   - Job matching algorithm
+   - Resume analysis capabilities
+5. **Performance**: Optimized builds with Vite, lazy loading components
+
+## Environment Variables Needed
+- VITE_OPENAI_API_KEY: OpenAI API key for AI responses
+- VITE_NOTION_API_KEY: Notion integration API key
+- VITE_NOTION_DATABASE_ID: Notion database ID for projects
+- VITE_PINECONE_API_KEY: Pinecone vector database API key
+- VITE_PINECONE_ENVIRONMENT: Pinecone environment
+- VITE_PINECONE_INDEX: Pinecone index name
+
+## AI Assistant Tasks
+1. Generate the initial project structure and configuration files
+2. Create TypeScript interfaces for project data and chat messages
+3. Implement the core chatbot functionality with message history
+4. Set up the AI service integrations with proper error handling
+5. Create the GitHub Actions workflow for deployment
+6. Implement the self-learning mechanisms for the chatbot
+
+## Special Instructions
+- Use functional components with React hooks
+- Implement proper TypeScript typing throughout
+- Add error boundaries for API calls
+- Include loading states for asynchronous operations
+- Ensure all AI features have fallbacks for when APIs are unavailable
+- Make the chatbot the centerpiece of the portfolio experience
+
+## Success Criteria
+1. Portfolio builds without errors
+2. Chatbot responds to user messages
+3. Projects are displayed in a responsive grid
+4. Theme system works with persistence
+5. Deployment to GitHub Pages succeeds
+6. AI services handle errors gracefully
+
+Please proceed step by step, showing me the code for each component as we build it.
+
+
+
+
+
+
+
+
+
+Step 1: Initialize Your Repository
+First, clone your empty repository and set up the basic structure:
+
+# Clone your repository
+git clone https://github.com/Gmpho/AI-portfolio.git
+cd AI-portfolio
+
+# Initialize with npm
+npm init -y
+
+# Initialize git (if not already done)
+git init
+
+
+Step 2: Install Dependencies
+Install the necessary dependencies for your Vite + TypeScript project:
+
+bash
+# Install Vite and TypeScript
+npm install vite typescript @vitejs/plugin-react vite-plugin-html --save-dev
+
+# Install React (if using React)
+npm install react react-dom @types/react @types/react-dom
+
+# Install UI dependencies
+npm install tailwindcss @tailwindcss/typography autoprefixer postcss --save-dev
+
+# Install AI service dependencies
+npm install openai @notionhq/client @pinecone-database/pinecone pdf-js --save-dev
+
+# Initialize Tailwind CSS
+npx tailwindcss init -p
+Step 3: Create Basic Project Structure
+Create the necessary folders and files:
+
+bash
+# Create folder structure
+mkdir -p src/components src/services src/hooks src/types src/utils src/assets
+mkdir -p public .github/workflows
+
+# Create basic files
+touch vite.config.ts tsconfig.json tailwind.config.js postcss.config.js
+touch index.html src/main.ts src/style.css
+Step 4: Set Up Configuration Files
+vite.config.ts - Configure Vite:
+
+typescript
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [react()],
+  base: '/AI-portfolio/',
+  server: {
+    port: 3000,
+  },
+})
+tsconfig.json - TypeScript configuration:
+
+json
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["src"],
+  "references": [{ "path": "./tsconfig.node.json" }]
+}
+tailwind.config.js - Tailwind CSS configuration:
+
+javascript
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
+  ],
+  theme: {
+    extend: {
+      colors: {
+        primary: {
+          50: '#eff6ff',
+          500: '#3b82f6',
+          600: '#2563eb',
+          700: '#1d4ed8',
+        }
+      }
+    },
+  },
+  plugins: [],
+}
+Step 5: Create Basic HTML Structure
+Create index.html in the root directory:
+
+html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI-Powered Portfolio</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
+Step 6: Create Main TypeScript Entry Point
+Create src/main.ts:
+
+typescript
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import App from './App'
+import './style.css'
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+)
+Step 7: Create Basic CSS
+Create src/style.css:
+
+css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
+  min-height: 100vh;
+}
+Step 8: Create Initial App Component
+Create src/App.tsx:
+
+typescript
+import { useState } from 'react'
+import './App.css'
+
+function App() {
+  const [count, setCount] = useState(0)
+
+  return (
+    <div className="App">
+      <h1 className="text-3xl font-bold underline text-blue-600">
+        AI Portfolio - Coming Soon
+      </h1>
+      <div className="card">
+        <button onClick={() => setCount((count) => count + 1)}>
+          count is {count}
+        </button>
+        <p>
+          Edit <code>src/App.tsx</code> and save to test HMR
+        </p>
+      </div>
+    </div>
+  )
+}
+
+export default App
+Step 9: Set Up Git and Make Initial Commit
+bash
+# Add all files to git
+git add .
+
+# Make initial commit
+git commit -m "Initial project setup with Vite + React + TypeScript"
+
+# Push to GitHub
+git branch -M main
+git remote add origin https://github.com/Gmpho/AI-portfolio.git
+git push -u origin main
+Step 10: Set Up Environment Variables
+Create a .env file (add this to .gitignore):
+
+env
+VITE_OPENAI_API_KEY=your_openai_api_key_here
+VITE_NOTION_API_KEY=your_notion_api_key_here
+VITE_NOTION_DATABASE_ID=your_notion_database_id_here
+VITE_PINECONE_API_KEY=your_pinecone_api_key_here
+VITE_PINECONE_ENVIRONMENT=your_pinecone_environment
+VITE_PINECONE_INDEX=your_pinecone_index_name
+Create .gitignore file:
+
+text
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Directory for instrumented libs generated by jscoverage/JSCover
+lib-cov
+
+# Coverage directory used by tools like istanbul
+coverage
+*.lcov
+
+# nyc test coverage
+.nyc_output
+
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variables file
+.env
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Vite build output
+dist
+build
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Step 11: Set Up GitHub Actions for Deployment
+Create .github/workflows/deploy.yml:
+
+yaml
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Build project
+        run: npm run build
+        env:
+          VITE_OPENAI_API_KEY: ${{ secrets.VITE_OPENAI_API_KEY }}
+          VITE_NOTION_API_KEY: ${{ secrets.VITE_NOTION_API_KEY }}
+          VITE_NOTION_DATABASE_ID: ${{ secrets.VITE_NOTION_DATABASE_ID }}
+          VITE_PINECONE_API_KEY: ${{ secrets.VITE_PINECONE_API_KEY }}
+          VITE_PINECONE_ENVIRONMENT: ${{ secrets.VITE_PINECONE_ENVIRONMENT }}
+          VITE_PINECONE_INDEX: ${{ secrets.VITE_PINECONE_INDEX }}
+          
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+Step 12: Set Up Package.json Scripts
+Update your package.json scripts:
+
+json
+{
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "deploy": "npm run build && gh-pages -d dist",
+    "setup:ai": "node scripts/setup-ai.js",
+    "test:ai": "node scripts/test-ai-services.js"
+  }
+}
+Step 13: Push Everything to GitHub
+bash
+# Add all files
+git add .
+
+# Commit changes
+git commit -m "Complete initial project setup with GitHub Actions"
+
+# Push to GitHub
+git push origin main
+Step 14: Set Up GitHub Secrets
+Go to your GitHub repository settings and add the following secrets:
+
+VITE_OPENAI_API_KEY - Your OpenAI API key
+
+VITE_NOTION_API_KEY - Your Notion API key
+
+VITE_NOTION_DATABASE_ID - Your Notion database ID
+
+VITE_PINECONE_API_KEY - Your Pinecone API key
+
+VITE_PINECONE_ENVIRONMENT - Your Pinecone environment
+
+VITE_PINECONE_INDEX - Your Pinecone index name
