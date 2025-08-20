@@ -61,41 +61,6 @@ npm install -D eslint prettier @typescript-eslint/eslint-plugin @typescript-esli
 npm install -D wrangler # Cloudflare Pages deploy helper
 
 2. Project Structure (Next.js + TypeScript)
-ai-portfolio/
-├── app/
-│   ├── api/
-│   │   ├── openai/route.ts
-│   │   ├── pinecone/route.ts
-│   │   ├── notion/route.ts
-│   │   └── ollama/route.ts
-│   ├── layout.tsx
-│   ├── page.tsx
-│   └── components/
-│       ├── ChatBot/
-│       ├── ProjectCard/
-│       ├── ThemeToggle/
-│       └── ResumeUpload/
-├── src/
-│   ├── services/
-│   │   ├── openaiService.ts
-│   │   ├── notionService.ts
-│   │   ├── pineconeService.ts
-│   │   └── ollamaService.ts
-│   ├── hooks/
-│   │   ├── useChat.ts
-│   │   └── useAI.ts
-│   ├── types/
-│   ├── utils/
-│   ├── config/
-│   └── data/
-├── public/
-├── .github/workflows/deploy.yml
-├── tailwind.config.js
-├── postcss.config.js
-├── tsconfig.json
-├── next.config.js
-├── .env.example
-└── README.md
 
 3. Core Configuration
 
@@ -239,3 +204,580 @@ Add Tailwind + ShadCN styling to match spacing, shadows, and rounded edges.
 Integrate AI chatbot logic with OpenAI/Ollama services.
 
 Optional: Animate the chatbot bubble and project card hover interactions.
+
+
+
+
+
+Complete Folder Structure
+text
+AI-portfolio/
+├── .github/workflows/
+│   └── deploy.yml                 # GitHub Actions CI/CD for Cloudflare
+├── app/                          # Next.js App Router
+│   ├── api/
+│   │   ├── chat/route.ts
+│   │   ├── pinecone/route.ts
+│   │   ├── notion/route.ts
+│   │   └── ollama/route.ts
+│   ├── globals.css
+│   ├── layout.tsx
+│   ├── page.tsx
+│   └── components/               # Next.js components
+│       ├── ui/                  # ShadCN UI components
+│       ├── chatbot/
+│       ├── projects/
+│       └── layout/
+├── src/
+│   ├── components/               # Reusable React Components
+│   │   ├── ChatBot/              # AI Chatbot System
+│   │   │   ├── ChatBot.tsx
+│   │   │   ├── Message.tsx
+│   │   │   ├── ChatInput.tsx
+│   │   │   └── index.ts
+│   │   ├── ProjectCard/          # Project Display
+│   │   │   ├── ProjectCard.tsx
+│   │   │   └── index.ts
+│   │   ├── ThemeToggle/          # Dark/Light Theme
+│   │   │   ├── ThemeToggle.tsx
+│   │   │   └── index.ts
+│   │   ├── Layout/               # Page Layout
+│   │   │   ├── Header.tsx
+│   │   │   ├── Footer.tsx
+│   │   │   └── MainLayout.tsx
+│   │   └── ResumeUpload/         # PDF Processing
+│   │       ├── ResumeUpload.tsx
+│   │       └── index.ts
+│   ├── services/                 # External API Integrations
+│   │   ├── openaiService.ts      # OpenAI Integration
+│   │   ├── notionService.ts      # Notion API Integration
+│   │   ├── pineconeService.ts    # Vector Database
+│   │   ├── ollamaService.ts      # Local AI Fallback
+│   │   └── resumeParser.ts       # PDF Resume Analysis
+│   ├── hooks/                    # Custom React Hooks
+│   │   ├── useChat.ts           # Chat State Management
+│   │   ├── useTheme.ts          # Theme Management
+│   │   ├── useLocalStorage.ts   # Browser Storage
+│   │   ├── useAI.ts             # AI Service Integration
+│   │   └── useResumeAnalysis.ts # PDF Processing
+│   ├── types/                   # TypeScript Definitions
+│   │   ├── chat.d.ts            # Chat System Types
+│   │   ├── project.d.ts         # Project Data Types
+│   │   ├── ai.d.ts              # AI Service Types
+│   │   ├── resume.d.ts          # Resume Analysis Types
+│   │   └── index.ts             # Barrel Export
+│   ├── utils/                   # Utility Functions
+│   │   ├── aiLearning.ts        # Self-Learning Algorithms
+│   │   ├── resumeAnalyzer.ts    # Resume Processing
+│   │   ├── skillExtractor.ts    # Skill Identification
+│   │   ├── storage.ts           # Data Persistence
+│   │   └── helpers.ts           # General Utilities
+│   ├── config/                  # Application Configuration
+│   │   ├── aiConfig.ts          # AI Service Settings
+│   │   └── constants.ts         # App Constants
+│   ├── data/                    # Static Data
+│   │   ├── projects.ts          # Project Data
+│   │   └── jobs.ts              # Job Market Data
+│   ├── styles/                  # Global Styles
+│   │   ├── globals.css          # Tailwind Imports
+│   │   └── themes.css           # Theme Variables
+│   └── lib/                     # Library code
+│       ├── utils.ts
+│       └── validators.ts
+├── public/                      # Static files
+│   ├── favicon.ico
+│   ├── svg/                     # SVG assets
+│   └── resumes/                 # Sample resume PDFs
+├── scripts/                     # Build/Setup Scripts
+│   ├── setup-ai.js              # AI Service Setup
+│   ├── test-ai.js               # Service Testing
+│   └── deploy-check.js          # Pre-deploy Validation
+├── docs/                        # Documentation
+│   ├── ARCHITECTURE.md          # Technical Architecture
+│   ├── API.md                   # API Documentation
+│   └── DEPLOYMENT.md            # Deployment Guide
+├── tests/                       # Test Files
+│   ├── unit/                    # Unit Tests
+│   ├── integration/             # Integration Tests
+│   └── e2e/                     # End-to-End Tests
+├── package.json                 # Dependencies & Scripts
+├── tsconfig.json               # TypeScript Configuration
+├── next.config.js              # Next.js Configuration
+├── tailwind.config.js          # Tailwind CSS Config
+├── postcss.config.js           # PostCSS Configuration
+├── .env.example                # Environment Template
+├── .gitignore                  # Git Ignore Rules
+└── README.md                   # Project Overview
+Installation & Setup Commands
+Initial Setup
+bash
+# Clone repository
+git clone https://github.com/Gmpho/AI-portfolio.git
+cd AI-portfolio
+
+# Install all dependencies
+npm install
+
+# Set up environment
+cp .env.example .env.local
+# Edit .env.local with your actual API keys
+
+# Start development server
+npm run dev
+
+# Build for production
+npm run build
+
+# Test deployment locally
+npm run start
+
+# Run tests
+npm run test
+Environment Variables (.env.local)
+env
+# OpenAI Configuration
+OPENAI_API_KEY=sk-your-openai-key-here
+OPENAI_MODEL=gpt-4-turbo-preview
+
+# Notion Configuration
+NOTION_API_KEY=secret_your-notion-key
+NOTION_DATABASE_ID=your-database-id-here
+
+# Pinecone Configuration
+PINECONE_API_KEY=your-pinecone-key
+PINECONE_ENVIRONMENT=us-east-1
+PINECONE_INDEX=portfolio-knowledge
+
+# Ollama Configuration (Optional)
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=llama2
+
+# Application Settings
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=your-nextauth-secret
+
+# Sentry Configuration (Optional)
+NEXT_PUBLIC_SENTRY_DSN=your-sentry-dsn
+Core AI System Architecture
+Self-Learning Chatbot System
+typescript
+// Learning Mechanism
+interface LearningEngine {
+  extractSkills(messages: ChatMessage[]): string[]
+  updateUserProfile(profile: UserProfile, newData: Partial<UserProfile>): UserProfile
+  generateCareerRecommendations(profile: UserProfile): Recommendation[]
+  calculateLearningProgress(interactions: number): number
+}
+
+// Knowledge Representation
+interface UserProfile {
+  skills: string[]
+  experienceLevel: 'entry' | 'mid' | 'senior'
+  jobPreferences: {
+    title: string
+    location: string
+    remote: boolean
+    salaryRange: string
+    industries: string[]
+  }
+  conversationHistory: ChatMessage[]
+  learningProgress: number
+  resumeAnalysis?: ResumeAnalysis
+  lastUpdated: Date
+}
+
+// Resume Analysis System
+interface ResumeAnalysis {
+  rawText: string
+  extractedSkills: string[]
+  experience: WorkExperience[]
+  education: Education[]
+  recommendations: string[]
+  confidence: number
+  analysisDate: Date
+}
+PDF Processing Pipeline
+typescript
+// Resume parsing workflow
+const processResume = async (file: File): Promise<ResumeAnalysis> => {
+  // 1. Extract text from PDF using PDF.js
+  // 2. Parse and structure resume data
+  // 3. Identify skills and experience
+  // 4. Generate career recommendations
+  // 5. Update user profile with new insights
+}
+Next.js Configuration
+Next.config.js
+javascript
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  experimental: {
+    serverComponentsExternalPackages: ['pdf-parse'],
+  },
+  images: {
+    domains: ['www.notion.so', 'images.unsplash.com'],
+  },
+  env: {
+    CUSTOM_ENV: process.env.CUSTOM_ENV || 'development',
+  },
+}
+
+module.exports = nextConfig
+Tailwind Configuration
+javascript
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  darkMode: ['class'],
+  content: [
+    './pages/**/*.{ts,tsx}',
+    './components/**/*.{ts,tsx}',
+    './app/**/*.{ts,tsx}',
+    './src/**/*.{ts,tsx}',
+  ],
+  theme: {
+    container: {
+      center: true,
+      padding: '2rem',
+      screens: {
+        '2xl': '1400px',
+      },
+    },
+    extend: {
+      colors: {
+        border: 'hsl(var(--border))',
+        input: 'hsl(var(--input))',
+        ring: 'hsl(var(--ring))',
+        background: 'hsl(var(--background))',
+        foreground: 'hsl(var(--foreground))',
+        primary: {
+          DEFAULT: 'hsl(var(--primary))',
+          foreground: 'hsl(var(--primary-foreground))',
+        },
+        secondary: {
+          DEFAULT: 'hsl(var(--secondary))',
+          foreground: 'hsl(var(--secondary-foreground))',
+        },
+        destructive: {
+          DEFAULT: 'hsl(var(--destructive))',
+          foreground: 'hsl(var(--destructive-foreground))',
+        },
+        muted: {
+          DEFAULT: 'hsl(var(--muted))',
+          foreground: 'hsl(var(--muted-foreground))',
+        },
+        accent: {
+          DEFAULT: 'hsl(var(--accent))',
+          foreground: 'hsl(var(--accent-foreground))',
+        },
+        popover: {
+          DEFAULT: 'hsl(var(--popover))',
+          foreground: 'hsl(var(--popover-foreground))',
+        },
+        card: {
+          DEFAULT: 'hsl(var(--card))',
+          foreground: 'hsl(var(--card-foreground))',
+        },
+      },
+      borderRadius: {
+        lg: 'var(--radius)',
+        md: 'calc(var(--radius) - 2px)',
+        sm: 'calc(var(--radius) - 4px)',
+      },
+      keyframes: {
+        'accordion-down': {
+          from: { height: 0 },
+          to: { height: 'var(--radix-accordion-content-height)' },
+        },
+        'accordion-up': {
+          from: { height: 'var(--radix-accordion-content-height)' },
+          to: { height: 0 },
+        },
+      },
+      animation: {
+        'accordion-down': 'accordion-down 0.2s ease-out',
+        'accordion-up': 'accordion-up 0.2s ease-out',
+      },
+    },
+  },
+  plugins: [require('tailwindcss-animate')],
+}
+Deployment Configuration
+GitHub Actions Workflow (.github/workflows/deploy.yml)
+yaml
+name: Deploy to Cloudflare Pages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
+          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+          PINECONE_ENVIRONMENT: ${{ secrets.PINECONE_ENVIRONMENT }}
+          PINECONE_INDEX: ${{ secrets.PINECONE_INDEX }}
+
+      - name: Publish to Cloudflare Pages
+        uses: cloudflare/pages-action@1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: 'ai-portfolio'
+          directory: '.next'
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+TypeScript Definitions
+Comprehensive Type System
+typescript
+// Chat System
+interface ChatMessage {
+  id: string
+  role: 'user' | 'assistant' | 'system'
+  content: string
+  timestamp: Date
+  metadata?: {
+    learningImpact: number
+    contextTags: string[]
+    sentiment: 'positive' | 'negative' | 'neutral'
+    source?: 'openai' | 'ollama' | 'fallback'
+  }
+}
+
+// AI Response Handling
+interface AIResponse {
+  message: string
+  metadata: {
+    confidence: number
+    sources: string[]
+    learningApplied: boolean
+    suggestedActions: string[]
+    serviceUsed: 'openai' | 'ollama' | 'fallback'
+    processingTime: number
+  }
+}
+
+// Project Data (Notion Integration)
+interface Project {
+  id: string
+  title: string
+  description: string
+  technologies: string[]
+  githubUrl?: string
+  liveUrl?: string
+  imageUrl?: string
+  category: string
+  status: 'completed' | 'wip' | 'planned'
+  featured: boolean
+}
+Package.json Configuration
+Complete Scripts Section
+json
+{
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "type-check": "tsc --noEmit",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "setup:ai": "node scripts/setup-ai.js",
+    "test:ai": "node scripts/test-ai-services.js",
+    "deploy-check": "node scripts/deploy-check.js"
+  }
+}
+Critical Dependencies
+json
+{
+  "dependencies": {
+    "next": "14.x",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "openai": "^4.20.1",
+    "@notionhq/client": "^2.2.13",
+    "@pinecone-database/pinecone": "^1.1.0",
+    "pdfjs-dist": "^3.11.174",
+    "ollama": "^0.1.2",
+    "langchain": "^0.1.0",
+    "@langchain/core": "^0.1.0",
+    "@radix-ui/react-popover": "^1.0.7",
+    "lucide-react": "^0.294.0",
+    "clsx": "^2.0.0",
+    "class-variance-authority": "^0.7.0",
+    "tailwind-merge": "^1.14.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "typescript": "^5.0.0",
+    "tailwindcss": "^3.3.0",
+    "postcss": "^8.4.0",
+    "autoprefixer": "^10.4.0",
+    "eslint": "^8.0.0",
+    "eslint-config-next": "14.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "jest": "^29.0.0",
+    "@testing-library/react": "^13.0.0",
+    "@testing-library/jest-dom": "^6.0.0"
+  }
+}
+Development Workflow
+Local Development
+bash
+# Start development server with hot reload
+npm run dev
+
+# Run type checking
+npm run type-check
+
+# Run linting
+npm run lint
+
+# Build for production
+npm run build
+
+# Start production server
+npm run start
+Testing Strategy
+bash
+# Unit tests
+npm run test
+
+# Test with watch mode
+npm run test:watch
+
+# Coverage report
+npm run test:coverage
+
+# Test AI services
+npm run test:ai
+Troubleshooting Guide
+Common Issues
+Build Failures: Run npm run type-check and npm run lint first
+
+API Errors: Verify environment variables are set correctly
+
+PDF Processing: Ensure PDF.js is properly configured
+
+Ollama Connection: Make sure Ollama is running on localhost:11434
+
+Environment Setup Verification
+bash
+# Check all required environment variables
+node scripts/check-env.js
+
+# Test AI service connections
+node scripts/test-ai.js
+
+# Validate build output
+npm run build && npm run start
+Performance Optimization
+Next.js Optimizations
+Automatic code splitting with React.lazy()
+
+Image optimization with next/image
+
+Font optimization
+
+Built-in bundle analysis
+
+Runtime Optimizations
+Efficient chat history management
+
+AI response caching
+
+Lazy loading of components
+
+Optimized re-renders with React.memo
+
+Browser Support
+Chrome 90+
+
+Firefox 88+
+
+Safari 14+
+
+Edge 90+
+
+Mobile browsers (iOS Safari, Chrome Mobile)
+
+Future Enhancements
+Planned Features
+Voice interface for chatbot
+
+Multi-language support
+
+Advanced analytics dashboard
+
+Integration with job platforms (LinkedIn, Indeed)
+
+Real-time collaboration features
+
+Progressive Web App (PWA) capabilities
+
+Advanced resume builder with AI suggestions
+
+Technical Improvements
+Service Worker for offline functionality
+
+WebSocket connections for real-time updates
+
+Advanced caching strategies
+
+Machine learning model fine-tuning
+
+Enhanced security measures
+
+Maintenance Notes:
+
+Keep dependencies updated regularly
+
+Monitor API usage and costs
+
+Regularly test all AI service integrations
+
+Maintain comprehensive documentation
+
+Monitor performance and user feedback
+
+Last Updated: ${new Date().toISOString().split('T')[0]}
+Maintainer: Gmpho
+Support: Create issues in GitHub repository
+
+text
+
+This comprehensive GEMINI.md document provides everything an AI assistant would need to understand, maintain, and develop your AI-powered portfolio project. It includes:
+
+1. **Complete technical architecture** and setup instructions
+2. **Detailed configuration** for all services and deployment
+3. **TypeScript definitions** for the entire codebase
+4. **Development workflows** and troubleshooting guide
+5. **Future roadmap** and enhancement ideas
+
+The document is structured to be easily parsed by AI tools while providing comprehensive technical details for human developers as well.
