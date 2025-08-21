@@ -18,6 +18,7 @@ on:
     inputs:
       pr_number:
         description: 'PR number to review'
+        
         required: true
         type: 'number'
 
