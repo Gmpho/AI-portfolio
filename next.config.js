@@ -1,8 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    serverComponentsExternalPackages: ['pdf-parse'],
-  },
+  serverExternalPackages: ['pdf-parse'],
   images: {
     domains: ['www.notion.so', 'images.unsplash.com'],
   },

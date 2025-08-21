@@ -3,16 +3,16 @@
 import { Pinecone } from '@pinecone-database/pinecone';
 
 const apiKey = process.env.PINECONE_API_KEY;
-const environment = process.env.PINECONE_ENVIRONMENT;
+const environment = process.env.PINECONE_ENVIRONMENT; // Keep for potential future use or logging
 const indexName = process.env.PINECONE_INDEX;
 
-if (!apiKey || !environment || !indexName) {
-  throw new Error('Pinecone environment variables (PINECONE_API_KEY, PINECONE_ENVIRONMENT, PINECONE_INDEX) are not set.');
+if (!apiKey || !indexName) { // Removed environment from check
+  throw new Error('Pinecone environment variables (PINECONE_API_KEY, PINECONE_INDEX) are not set.');
 }
 
 const pinecone = new Pinecone({
   apiKey: apiKey,
-  environment: environment,
+  // environment: environment, // Removed environment from constructor
 });
 
 export const getPineconeIndex = () => pinecone.Index(indexName);
