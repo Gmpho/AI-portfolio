@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
-import { getChatCompletion, moderateContent, filterResponse } from '@/services/openaiService';
+import { getChatCompletion, moderateContent, filterResponse, getEmbeddings } from '@/services/openaiService';
 import { extractSkills } from '@/utils/skillExtractor';
 import { getUserProfile, updateUserProfile, addMessageToHistory, generateCareerRecommendations } from '@/services/userService';
 import { ChatMessage } from '@/types/chat.d';
+import { queryVectors } from '@/services/pineconeService';
+import { getProjectsFromNotion } from '@/services/notionService';
+import { getCompletion as getOllamaCompletion } from '@/services/ollamaService'; // Import Ollama completion
 
 // Simple in-memory store for rate limiting
 const userRequestCounts = new Map<string, { count: number; lastReset: number }>();
@@ -37,7 +40,7 @@ export async function POST(request: Request) {
     const { message, history = [] } = await request.json(); // Accept history array
 
     // Combine history with the new message
-    const messages = [...history, { role: 'user', content: message }];
+    const messages: ChatMessage[] = [...history, { role: 'user', content: message, id: Date.now().toString(), timestamp: new Date() }];
 
     // 1. Input Validation
     if (!message || typeof message !== 'string' || message.trim().length === 0) {
@@ -55,8 +58,58 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Your message contains content that violates our policies.' }, { status: 403 });
     }
 
-    // 3. Get Chat Completion (if input is valid and not flagged)
-    const aiResponse = await getChatCompletion(messages); // Pass combined messages
+    // Knowledge Retrieval (Pinecone + Notion)
+    let context = '';
+    try {
+      const messageEmbedding = await getEmbeddings(message);
+      const pineconeMatches = await queryVectors(messageEmbedding);
+      if (pineconeMatches && pineconeMatches.length > 0) {
+        context += 'Relevant knowledge from Pinecone:\n' + pineconeMatches.map((match: any) => match.metadata?.text || '').join('\n') + '\n';
+      }
+
+      const notionProjects = await getProjectsFromNotion();
+      if (notionProjects && notionProjects.length > 0) {
+        context += 'Relevant projects from Notion:\n' + notionProjects.map((project: any) => project.properties?.Name?.title[0]?.plain_text || '').join(', ') + '\n';
+      }
+    } catch (contextError) {
+      console.error("Error retrieving context:", contextError);
+      // Continue without context if there's an error
+    }
+
+    // Add context to messages if available
+    const messagesWithContext = context ? [{ role: 'system', content: `Here is some additional context that might be relevant:
+${context}` }, ...messages] : messages;
+
+    let aiResponse: string | null = null;
+    try {
+      // 3. Get Chat Completion (if input is valid and not flagged)
+      aiResponse = await getChatCompletion(messagesWithContext); // Pass combined messages with context
+    } catch (openaiError: any) {
+      console.error("OpenAI chat completion failed, attempting Ollama fallback:", openaiError);
+      // Check if the error is due to circuit breaker or other OpenAI issues
+      // Also check feature flag for Ollama fallback
+      if (process.env.NEXT_PUBLIC_FEATURE_ENABLE_OLLAMA_FALLBACK === 'false') {
+        console.warn('Ollama fallback is disabled by feature flag.');
+        throw openaiError; // Re-throw original OpenAI error
+      }
+
+      if (openaiError.message.includes('OpenAI service is currently unavailable') || openaiError.status === 500) { // Example error check
+        try {
+          aiResponse = await getOllamaCompletion(messagesWithContext); // Fallback to Ollama
+          console.log("Successfully used Ollama fallback.");
+        } catch (ollamaError) {
+          console.error("Ollama fallback also failed:", ollamaError);
+          return NextResponse.json({ error: 'Both primary and fallback AI services are unavailable.' }, { status: 500 });
+        }
+      } else {
+        // Re-throw if it's not a service unavailability error
+        throw openaiError;
+      }
+    }
+
+    if (!aiResponse) {
+      return NextResponse.json({ error: 'AI response could not be generated.' }, { status: 500 });
+    }
 
     // 4. Response Filtering
     const { filteredText, flagged: responseFlagged, reason: responseReason } = filterResponse(aiResponse);

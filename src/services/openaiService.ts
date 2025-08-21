@@ -4,15 +4,43 @@ const openai = new OpenAI({
   apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
 });
 
+// Circuit Breaker State
+let circuitState: 'CLOSED' | 'OPEN' | 'HALF_OPEN' = 'CLOSED';
+let failureCount = 0;
+let lastFailureTime = 0;
+const FAILURE_THRESHOLD = 3; // Number of consecutive failures to open the circuit
+const RESET_TIMEOUT_MS = 60 * 1000; // Time to wait before attempting to close (1 minute)
+
 export const getChatCompletion = async (messages: any[]) => {
+  if (circuitState === 'OPEN' && (Date.now() - lastFailureTime < RESET_TIMEOUT_MS)) {
+    console.warn('Circuit is OPEN. Bypassing OpenAI chat completion.');
+    throw new Error('OpenAI service is currently unavailable (circuit open).');
+  }
+
   try {
     const response = await openai.chat.completions.create({
       model: "gpt-4", // Or another suitable model
       messages: messages,
     });
+
+    // Reset circuit on success
+    circuitState = 'CLOSED';
+    failureCount = 0;
+
     return response.choices[0].message.content;
   } catch (error) {
     console.error("Error getting chat completion:", error);
+    failureCount++;
+    lastFailureTime = Date.now();
+
+    if (failureCount >= FAILURE_THRESHOLD) {
+      circuitState = 'OPEN';
+      console.error('Circuit opened for OpenAI chat completion due to multiple failures.');
+    } else if (circuitState === 'OPEN' && (Date.now() - lastFailureTime >= RESET_TIMEOUT_MS)) {
+      circuitState = 'HALF_OPEN'; // Attempt to close after timeout
+      console.warn('Circuit is HALF_OPEN. Attempting to re-test OpenAI chat completion.');
+    }
+
     throw error;
   }
 };
