@@ -95,7 +95,8 @@ ${context}` }, ...messages] : messages;
 
       if (openaiError.message.includes('OpenAI service is currently unavailable') || openaiError.status === 500) { // Example error check
         try {
-          aiResponse = await getOllamaCompletion(messagesWithContext); // Fallback to Ollama
+          const ollamaResponse = await getOllamaCompletion(messagesWithContext); // Fallback to Ollama
+          aiResponse = ollamaResponse.choices[0].message.content;
           console.log("Successfully used Ollama fallback.");
         } catch (ollamaError) {
           console.error("Ollama fallback also failed:", ollamaError);

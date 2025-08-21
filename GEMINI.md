@@ -57,6 +57,9 @@ Development:
   Testing: Jest + React Testing Library
 ```
 
+## Project Documentation
+*   [Project Documentation Structure (2025 Best Practices)](./Project%20Documentation%20Structure%20(2025%20Best%20Practices).pdf)
+
 ## Complete Folder Structure 📁
 
 ```
@@ -157,4 +160,3 @@ AI-portfolio/ 🚀
 ├── .env.example                # Environment Template 🔑
 ├── .gitignore                  # Git Ignore Rules 🚫
 └── README.md                   # Project Overview & Documentation 📖
-```

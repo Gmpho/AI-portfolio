@@ -1,4 +1,9 @@
-# AI-Powered Portfolio - Complete Project Documentation
+# AI-portfolio
+AI Powered portfolio
+
+## Project Documentation
+*   [Project Documentation Structure (2025 Best Practices)](./Project%20Documentation%20Structure%20(2025%20Best%20Practices).pdf)
+
 
 [![Build Status](https://github.com/Gmpho/AI-portfolio/actions/workflows/deploy.yml/badge.svg)](https://github.com/Gmpho/AI-portfolio/actions/workflows/deploy.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
