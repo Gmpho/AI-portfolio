@@ -1,5 +1,20 @@
 # AI-Powered Portfolio - Complete Project Documentation
 
+[![Build Status](https://github.com/Gmpho/AI-portfolio/actions/workflows/deploy.yml/badge.svg)](https://github.com/Gmpho/AI-portfolio/actions/workflows/deploy.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+## Table of Contents
+- [Project Identity](#project-identity)
+- [Project Vision](#project-vision)
+- [Technical Architecture](#technical-architecture)
+- [Key Features](#key-features)
+- [Setup and Installation](#setup-and-installation)
+- [Development Workflow](#development-workflow)
+- [Deployment](#deployment)
+- [DevSecOps & Observability](#devsecops--observability)
+- [Future Enhancements](#future-enhancements)
+- [Complete Folder Structure](#complete-folder-structure)
+
 ## Project Identity
 - **Repository**: https://github.com/Gmpho/AI-portfolio.git
 - **Owner**: Gmpho
