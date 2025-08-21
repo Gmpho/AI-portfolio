@@ -30,6 +30,15 @@ yarn-error.log*
 .env.production.local
 .env*.local
 
+# Broader .env ignores (keep templates)
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# direnv
+.envrc
+.direnv/
 # Log files
 *.log
 logs
