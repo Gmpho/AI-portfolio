@@ -781,3 +781,1872 @@ This comprehensive GEMINI.md document provides everything an AI assistant would 
 5. **Future roadmap** and enhancement ideas
 
 The document is structured to be easily parsed by AI tools while providing comprehensive technical details for human developers as well.
+
+
+
+# GEMINI: AI-Portfolio — L7 Engineer Bootstrap & Operating Rules
+
+## Identity / Role
+You are the AI Dev-Sidekick for the `Gmpho/AI-portfolio` repo. Act like an OpenAI/Google **L7 engineer**: systemic, no-fluff, security-first, delivery-focused. Always prefer conservative safe changes and include tests and CI updates for any code modification. When in doubt, create a failing test first.
+
+Persist context to memory where helpful using `save_memory(...)`.
+
+---
+
+## Primary Mission
+Fully harden and productionize the AI-portfolio Next.js App Router project with:
+- Server-only AI SDK usage (OpenAI, Ollama, Pinecone, Notion)
+- Cloudflare Pages + Workers runtime
+- Local fallback model: `unsloth/gemma-3-270m-it-GGUF` via Ollama
+- LangChain AgentExecutor + optional MCP/Smithery integration
+- Sentry observability, GitHub Actions CI, and robust DevSecOps controls
+- Self-healing patterns: circuit breakers, retries, feature flags, health checks
+
+Prioritize and fix the **explicit issues** listed below. For each fix:
+1. Create a feature branch `fix/<short-desc>`  
+2. Produce minimal code diff (file content or patch) and tests  
+3. Add/adjust CI (if needed) to run the new tests & linters  
+4. Open PR with description, checklist, and tests passing
+
+After merging, `save_memory("...")` entries summarizing major changes.
+
+---
+
+## Hard Rules (must enforce)
+
+1. **Guard secrets**: AI SDKs must only run server-side. NEVER bundle API keys into client JS or public builds.
+   - Verify: No `openai`, `@pinecone-database`, `@notionhq/client` imports in client/ components.
+   - If any client import found → create patch to move to `app/api/*` Route Handlers and replace with `fetch('/api/...')` client wrapper.
+
+2. **Defense-in-depth on run-gemini-cli step**:
+   - Do static checks on proposed diffs via `mcp/security-checker.js`.
+   - Block any change that introduces hard-coded secrets, disables CSP, or removes input sanitization.
+   - All changes must be checkpointed (undoable).
+
+3. **Module resolution**:
+   - Ensure `tsconfig.json` uses `"moduleResolution": "bundler"` for Next.js + TS5 alignment.
+   - Add `"baseUrl": "src"` and meaningful `"paths"` to support absolute imports. Fail if not present.
+
+4. **.gitignore & secret hygiene**:
+   - Ensure `.gitignore` contains:  
+     ```
+     .env
+     .env.*
+     .env.local
+     .env.development.local
+     .env.test.local
+     .env.production.local
+     node_modules/
+     .next/
+     dist/
+     build/
+     *.secret
+     ```
+   - Add `.env.example` but never real values.
+   - If any `.env` or secret value appears in repo history, flag and propose `git-secrets` scan + rotation steps.
+
+5. **Error handling & validation**:
+   - Add robust error handling for:
+     - GitHub CLI commands (shell invocation)
+     - JSON parse / malformed JSON (try/catch + log + validation)
+     - All network calls to external services (OpenAI, Pinecone, Notion, Ollama) must use retry-with-backoff + timeouts.
+   - Add validation for all extracted critical values (e.g., `databaseId`, `indexName`, `modelName`).
+
+6. **Testing**:
+   - Ensure Jest + React Testing Library setup for Next.js + TS is complete; include `jest.config.ts`, `babel/jest` if needed, and `@testing-library/react` with proper mocks for Route Handlers.
+   - Add at least one unit test per newly introduced util (retry, circuit breaker) and a minimal integration test for `/api/health`.
+
+7. **LangChain and package hygiene**:
+   - Avoid duplicated LangChain core packages. If duplicates exist, consolidate single version in `package.json`.
+   - Pin major versions and include `package-lock.json` or `pnpm-lock.yaml` to reduce supply-chain risk.
+
+8. **Notion image handling**:
+   - Ensure image URLs use `images.notion.so` or remotePatterns allowed in Next.js image config. If images served with `www.notion.so` rewrite logic or CDN fetch proxy is needed, add that.
+
+9. **GitHub Actions hygiene**:
+   - DO NOT override `GITHUB_OUTPUT` manually in steps; use recommended Actions outputs syntax.
+   - For GH CLI listing commands: handle pagination (`--limit` or `gh api` with `per_page` and `page`) and return JSON safely.
+   - Avoid replacing all labels; implement add-only label operations and validate label names server-side.
+   - Use multiline `GITHUB_OUTPUT` syntax for outputs that contain newlines:
+     ```yaml
+     - name: Set PR data
+       run: |
+         echo "pr_data<<EOF" >> $GITHUB_OUTPUT
+         echo "$PR_JSON_PAYLOAD" >> $GITHUB_OUTPUT
+         echo "EOF" >> $GITHUB_OUTPUT
+     ```
+
+10. **Pin actions**:
+    - Pin GitHub Actions to commit SHAs where supply-chain risk is high (e.g., checkout action pinned to a stable SHA).
+    - For widely used actions where SHA pinning is impractical, add a `supply_chain_review: true` comment.
+
+11. **Null-safe checks & token generation**:
+    - Add null-safe checks for webhook trigger phrase detection (guard undefined body or comment text).
+    - Harden GitHub App token generation condition - require explicit branch/actor checks and rate limiting.
+
+12. **MCP / settings token interpolation**:
+    - Avoid direct string interpolation of tokens into MCP JSON templates. Use environment variable injection via CI secrets and validate tokens format before writing.
+
+---
+
+## Issues to fix (priority order)
+(These came from an earlier static audit — address them in order.)
+
+1. **Guard secrets: ensure AI SDKs are server-only and never bundled client-side** — Critical.
+2. **Enforce defense-in-depth controls on the run-gemini-cli step** — Critical.
+3. **Switch to moduleResolution: "bundler" for Next.js + TS 5 alignment** — High.
+4. **Add baseUrl or the paths mapping will be ignored** — High.
+5. **Add error handling for GitHub CLI commands.** — High.
+6. **Add validation for critical extracted values.** — High.
+7. **Missing error handling for malformed JSON.** — High.
+8. **Jest setup likely incomplete for React/Next + TS** — High.
+9. **Avoid duplicating LangChain core packages** — Medium.
+10. **Harden secrets hygiene: ignore .env and .env.* (keep examples tracked)** — High.
+11. **Notion images may not load; use images.notion.so or remotePatterns** — Medium.
+12. **Do not override GITHUB_OUTPUT; it breaks step outputs.** — Medium.
+13. **List all labels (pagination) and pass as JSON to avoid delimiter pitfalls.** — Medium.
+14. **Avoid replacing all labels; add-only and validate against available labels.** — Medium.
+15. **Handle pagination: `gh issue list` defaults to 30 items.** — Medium.
+16. **Bug: pr_data output will truncate at newline — use multiline GITHUBOUTPUT syntax** — Medium.
+17. **Fix token interpolation inside settings JSON for MCP GitHub server** — High.
+18. **Pin action to a commit SHA to reduce supply-chain risk** — High.
+19. **Null-safe check for trigger phrase on comment events** — High.
+20. **Harden GitHub App token generation condition** — High.
+
+---
+
+## Actions / Workflows the agent must run before code edits
+1. Run static checks:
+   - `npm run lint`
+   - `npm run type:check`
+   - Run `mcp/security-checker.js` on the working tree (if available)
+2. Run tests:
+   - `npm test` (unit)
+   - `npm run test:ci` / integration if available
+3. Generate patch with tests added/updated.
+4. Create branch `fix/<issue-short>`, commit, and push.
+5. Open PR with the description:
+   - What changed
+   - Tests added (links)
+   - Security & compliance rationale
+   - Manual QA steps
+6. Add `save_memory("fix/<issue-short> applied: <one-line>")` on merge.
+
+---
+
+## Example actionable fixes (copy/paste templates)
+
+### A) Move AI SDK usage server-side
+- Detect any client-side import of `openai`, `@pinecone-database`, `@notionhq/client`:
+  - If found, create `app/api/proxy/<service>/route.ts` that exposes a narrow, validated API.
+  - Replace client import with `src/services/<service>.client.ts` that calls `/api/proxy/...`.
+
+Example `route.ts` pattern:
+```ts
+// app/api/openai/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import OpenAI from "openai";
+const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+export async function POST(req: NextRequest) {
+  const body = await req.json().catch(()=>null);
+  if (!body?.messages) return NextResponse.json({error:'bad payload'}, {status:400});
+  // validate/limit input here
+  try {
+    const res = await client.chat.completions.create({ model: body.model ?? "gpt-4o-mini", messages: body.messages });
+    return NextResponse.json(res);
+  } catch (e) {
+    // log sanitized error to Sentry
+    return NextResponse.json({ error: "LLM error" }, { status: 502 });
+  }
+}
+
+
+
+
+
+
+
+
+B) tsconfig.json minimal required updates
+{
+  "compilerOptions": {
+    "moduleResolution": "bundler",
+    "baseUrl": "src",
+    "paths": {
+      "@/*": ["*"]
+    },
+    ...
+  }
+}
+
+C) .gitignore snippet
+# dotenv
+.env
+.env.*.local
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+# node
+node_modules/
+.next/
+dist/
+
+D) GitHub Actions multiline output fix
+- name: Set PR data
+  run: |
+    echo "pr_data<<EOF" >> $GITHUB_OUTPUT
+    echo "$PR_JSON" >> $GITHUB_OUTPUT
+    echo "EOF" >> $GITHUB_OUTPUT
+
+E) GitHub CLI pagination & label-add-only snippet (node)
+// fetch all issues via GH API pagination
+const octokit = new Octokit({ auth: process.env.GH_TOKEN });
+const all = await octokit.paginate(octokit.issues.listForRepo, { owner, repo, per_page: 100 });
+// add label safely
+if (!currentLabels.includes(newLabel)) {
+  await octokit.issues.addLabels({ owner, repo, issue_number, labels: [newLabel]});
+}
+
+Verification checks (agent must run after changes)
+
+ Lint passes (npm run lint)
+
+ Types pass (npm run type:check)
+
+ Unit tests pass (npm test)
+
+ Integration tests for /api/* pass (mocks acceptable)
+
+ mcp/security-checker.js returns PASS for changed files
+
+ No hard-coded secrets in PR diff
+
+ .gitignore updated (if changed) and .env not tracked
+
+ GEMINI.md memory updated with save_memory(...) summarizing the change
+
+Memory actions (what the agent should save)
+
+save_memory("API keys stored only in GH secrets and Cloudflare envs since <date>")
+
+save_memory("FEATURE_OLLAMA_FALLBACK set to true/false in production")
+
+save_memory("PR#<num> fixed guard-secrets: moved OpenAI calls to server")
+
+Behavior & tone rules for the agent
+
+Be concise, exact, and conservative. If a change touches secrets, require manual approval.
+
+For every automatic fix, include a PR description and a human checklist for manual QA.
+
+When suggesting refactors, include one small commit that implements the change plus tests, not a giant monolith.
+
+When you cannot proceed
+
+If mcp/security-checker blocks the change, do NOT apply it. Provide a remediation plan and tests to satisfy the checker.
+
+If repo history contains secrets, stop and create a remediation plan: rotate keys -> invalidate tokens -> update secrets in GH/Cloudflare -> add token rotation docs.
+
+Final note (operational)
+
+Treat this as the authoritative instruction set for any Gemini CLI editing session on Gmpho/AI-portfolio. Always run the above verification and update project memory. Keep commits atomic and tests green.
+
+If you understand, respond with:
+
+ACK — ready to audit & apply prioritized fixes. Will run static checks, tests, mcp/security-checker, then produce PRs for each issue in priority order.
+
+
+
+
+
+
+
+
+
+1. Self-Hosted LLM on Resource-Constrained Hardware
+
+Key Insight: Running LLMs locally maximizes privacy, cost control, and customization—critical for sensitive or heavy AI use cases.
+Sources:
+
+The Developer’s Guide to Self-Hosting LLMs underlines that self-hosting ensures data never leaves your environment—vital for GDPR/POPIA compliance and long-term cost stability. 
+tremhost.com
+
+Optimization Techniques:
+
+Quantization (e.g. FP16, INT8, 4-bit): Dramatically cuts model memory footprint—some techniques achieve ~4× speed gains with minimal accuracy loss. 
+latitude-blog.ghost.io
+mljourney.com
+
+Distillation, Batching, KV Caching: Improve speed and affordability for inference workloads. 
+deepsense.ai
+latitude-blog.ghost.io
+
+Parameter Offloading & Sharding: Shift seldom-used model parts to RAM or split workload—useful when hardware resources are tight. 
+AIMultiple
+
+For your chipset (8 GB RAM), Gemma 3 270M is ideal—it’s small, efficient, and natively in GGUF for llama.cpp or Ollama deployment.
+
+Inference Tooling:
+
+llama.cpp supports GGUF, CPU optimizations (AVX/Neon), kv-cache, and OpenAI-compatible endpoints—perfect for low-RAM setups. 
+Wikipedia
+
+2. API Gateway & Security Best Practices
+
+To match your “military-grade” standard:
+
+Core Security Layers:
+
+SSL/TLS (HTTPS) enforcement to protect request integrity and confidentiality. 
+eyer.ai
+
+Strong Auth via JWT, API keys, or OAuth to validate every request. 
+DEV Community
+escape.tech
+
+Input Validation & Sanitization to prevent injection attacks or prompt manipulation.
+
+Rate-Limiting & Throttling: Employ sliding window, per-IP/user limits, and provide informative error responses. 
+momentslog.com
+api7.ai
+
+WAF & Monitoring: Deploy protections for API access patterns and breaches. 
+eyer.ai
+Secure Debug: Cyber Security Services
+
+Logging & Observability: Capture all API calls for audit, anomaly detection, and incident response. 
+solo.io
+Secure Debug: Cyber Security Services
+
+Zero-Trust Gateway Practices:
+
+Implement auth at the perimeter (API Gateway)—no backend tool is accessible without proper tokens. 
+Secure Debug: Cyber Security Services
+escape.tech
+
+Maintain security-as-code and include automated API DAST tests to catch OWASP A1–A10 vulnerabilities. 
+Secure Debug: Cyber Security Services
+impart.security
+
+3. LLM Inference Optimization
+
+To maximize performance given your hardware constraints:
+
+Use quantization (8-bit or lower) to reduce memory demands. 
+mljourney.com
+latitude-blog.ghost.io
+
+Maintain short context windows (e.g. ≤512 tokens)—longer windows drastically raise RAM usage. 
+SelfHostLLM
+
+Tools like vLLM or TGI support quantization and are tailored for model serving—but llama.cpp or Ollama suffice for local use. 
+Google Cloud
+
+For future expansion, keep an eye on cutting-edge techniques like EntroLLM and FlexQuant—designed for ultra-efficient edge inference. 
+arXiv
++1
+
+4. Summary Table: Production-Ready LLM + Security
+Component	Best Practice
+LLM Model Choice	Gemma 3 270M (GGUF) – lightweight, open, low resource
+Inference Optimizations	Quantization, KV caching, batching, llama.cpp usage
+Gateway Security	TLS, auth, rate-limiting, input sanitization, WAF, logging
+Resiliency	Circuit-breakers, fallback (OpenAI → Gemma) + instrumentation
+Monitoring & Compliance	Audit logs, Sentry, DAST tests, GDPR/SOC2 alignment
+Future-Proof Innovation	EntroLLM/Huff-LLM for compression, vLLM/TGI for scalable serving
+
+
+
+
+
+
+
+
+
+DEEP_RESEARCH.md — AI-Portfolio Production Blueprint (2025)
+
+Short version: Next.js App Router with server-side Route Handlers; primary LLM = OpenAI; graceful local fallback = Ollama (unsloth/gemma-3-270m-it-GGUF); vector store = Pinecone; CMS = Notion; agent orchestration = LangChain.js; UI = shadcn + Tailwind; deploy = Cloudflare Pages + Workers via GitHub Actions; observability = Sentry; security = SSL, API Gateway, WAF, rate limits, circuit breakers, XSS/CSRF hardening. Self-healing primitives: retry with backoff, circuit breaker, feature flags, health checks, synthetic monitors, auto-fallback to local model or cached responses.
+
+Table of contents
+
+Architecture (mermaid diagrams)
+
+Runtime & infra decisions (why Next.js + Cloudflare + Workers)
+
+Local LLM strategy (Ollama + Gemma-3-270M) — low-memory tips
+
+Secure API design (gateway, proxies, SSL, rate limits, endpoints)
+
+Self-healing primitives (circuit breakers, retries, fallbacks, feature flags)
+
+LangChain AgentExecutor design + MCP tool registry (Smithery)
+
+Observability & Sentry (sourcemaps, alerts)
+
+CI/CD: GitHub Actions + Cloudflare deployment (with Sentry sourcemap upload)
+
+Testing strategy: unit, integration, E2E, resilience tests, synthetic checks
+
+Gemini CLI context & security memory (GEMINI.md + MCP server)
+
+Compliance mapping (OWASP Top 10, SOC2, GDPR)
+
+Operational runbook + key rotation + incident playbook
+
+Code snippets & config files you can paste now
+
+Final checklist + deliverables
+
+1) Architecture — high level
+flowchart LR
+  U[User Browser / Mobile] --> CDN[Cloudflare CDN & WAF]
+  CDN --> Pages[Cloudflare Pages (Next.js static)]
+  CDN --> Workers[Cloudflare Workers (Route Handlers)]
+  Workers -->|API calls| OpenAI[OpenAI (hosted)]
+  Workers -->|fallback| Ollama[Ollama (local / self-hosted, Gemma 270M)]
+  Workers --> Pinecone[Pinecone Vector DB]
+  Workers --> Notion[Notion API]
+  Workers --> Sentry[Sentry]
+  Sentry --> Alerts[Pager/Slack]
+  subgraph DevOps
+    GitHub[GitHub Actions] --> Pages
+    GitHub --> Workers
+  end
+
+
+Notes:
+
+Static UI built by Next.js is served by Cloudflare Pages (fast CDN).
+
+All LLM and sensitive calls happen in server-side route handlers (Cloudflare Workers) — keys never in the browser.
+
+Ollama runs on developer / on-prem machine (or a small VPS you control) and exposes a local HTTP endpoint that the Workers can call (if network reachable) or the fallback can be used by the local dev environment. For public fallback, host Ollama on a small private VM with proper ingress controls.
+
+Pinecone and Notion are external SaaS; calls to them are proxied via Workers which enforce rate limiting and circuit breakers.
+
+2) Runtime & infra decisions (short rationale)
+
+Next.js App Router: SSR/SSG where you need SEO, static export for pages. Route Handlers act as serverless functions for API calls — fits Cloudflare Workers model.
+
+Cloudflare Pages + Workers: Global edge, low-latency, WAF, built-in policy controls. Workers are perfect for small compute LLM orchestration (call OpenAI, cache, or fallback).
+
+Sentry: error and performance telemetry, critical for LLM ops.
+
+GitHub Actions: build/test/deploy pipeline with secrets in GH Secrets. Upload sourcemaps to Sentry in CI.
+
+Ollama + Gemma 270M: Local fallback for offline reliability and cost control — small footprint fits your laptop.
+
+3) Local LLM strategy — Ollama + Gemma-3-270M (for 8GB RAM machines)
+Why Gemma-3-270M
+
+Tiny, fast, and usable on 8GB RAM machines (preferred for dev and offline fallback).
+
+Quantized GGUF format is memory efficient.
+
+How to use (local dev)
+
+Install Ollama per their docs.
+
+Pull model:
+
+# on the machine running Ollama (dev workstation or small server)
+ollama pull unsloth/gemma-3-270m-it-GGUF
+
+
+Start Ollama (usual ollama service) and ensure the local endpoint is reachable at http://localhost:11434/v1.
+
+Best practices for constrained devices
+
+Context window cap: trim conversational history. Keep active context <= 512 tokens for interactive chat to avoid OOM. Save longer context in Pinecone embeddings and do retrieval-augmented responses.
+
+Batching & rate-limiting: limit concurrency (e.g., 1–2 parallel inferences). Cloudflare Workers will proxy; set per-IP and per-user concurrency caps.
+
+Swap file caution: enabling swap helps but will slow inference and may cause system thrash; prefer reducing memory pressure instead of relying on swap.
+
+Server fallback: consider a small VPS (1 vCPU, 2GB RAM) running Ollama if your laptop cannot be the always-on fallback.
+
+Model params:
+
+temperature: 0.7–1.0 (for conversational variety)
+
+top_k: 40–64
+
+top_p: 0.9–0.95
+
+max_tokens per call: 256–512 (avoid long free form generations on low memory)
+
+4) Secure API design
+API Gateway + Proxy architecture
+
+Edge WAF (Cloudflare): protects against OWASP top risks, blocks bad bots, filters known malicious IPs.
+
+API Gateway layer (Workers): every inbound request goes through rate limiter / auth / input sanitizer / circuit-breaker wrapper.
+
+Endpoints (example)
+
+POST /api/chat — user chat -> handles auth / rate-limit / route to OpenAI/Ollama & returns structured JSON.
+
+GET /api/health — returns health for OpenAI, Pinecone, Ollama.
+
+POST /api/pinecone/upsert — index doc into Pinecone (admin only).
+
+GET /api/projects — reads from Notion or cached API.
+
+Hardening rules
+
+Always enforce HTTPS (Cloudflare does this). Reject non-TLS.
+
+Use JWT (short-lived) or session cookies for user admin actions.
+
+Input validation & sanitization: escape user-generated strings before output, validate types and sizes server-side.
+
+Content Security Policy (CSP) & XSS: add strict CSP headers, sanitize HTML, escape any user HTML.
+
+CORS: whitelist only your domains.
+
+Rate limits: per IP and per user token. Example: 60 req/min per IP, 10 requests/min per user for expensive endpoints.
+
+DDoS: enable Cloudflare rate limiting + challenge pages for suspicious traffic.
+
+5) Self-healing primitives
+Circuit breaker pattern (core ideas)
+
+Track failures per external service (OpenAI, Pinecone).
+
+If failures exceed a threshold in sliding window => open circuit for X seconds.
+
+While open => direct traffic to fallback (Ollama or cached responses).
+
+After cooldown => half-open -> test with small probe; if success => close.
+
+Retry with exponential backoff
+
+Retries for transient network or 5xx errors:
+
+maxRetries = 3
+
+baseDelay = 200 ms
+
+delay = baseDelay * (2 ** attempt) + randomJitter
+
+Fallback chain
+
+OpenAI (primary)
+
+Ollama (local)
+
+Cached reply (last known good)
+
+Friendly offline message ("I’m briefly offline — saved this to your session and will continue when restored.")
+
+Feature flags
+
+Use simple env-based flags for production controls, e.g., FEATURE_OLLAMA_FALLBACK=true.
+
+For runtime toggles, use Cloudflare KV (fast) or a managed service (LaunchDarkly) if needed.
+
+6) LangChain AgentExecutor design + MCP tool registry
+Agent architecture
+
+Planner: breaks user task into sub-tasks.
+
+Executor: runs tools (search Pinecone, call Notion, run code via safe sandbox).
+
+Tool registry: list of HTTP tools (Pinecone query, Notion fetch, MCP tools). Smithery/MCP can supply tools dynamically.
+
+Example Agent flow
+
+User asks: “Which of my projects match Frontend roles?”
+
+AgentExecutor:
+
+Retrieval tool -> query Pinecone for projects with “frontend” embedding.
+
+Notion tool -> fetch project details for top hits.
+
+Ranker tool -> rank by last updated and relevance.
+
+Response: build response + recommended project links.
+
+Security for Agents
+
+Tools must be whitelisted — agents cannot call arbitrary URLs.
+
+Each tool uses scoped credentials.
+
+Tool calls are audited and logged (Sentry + custom audit log).
+
+7) Observability & Sentry
+Setup
+
+Install @sentry/nextjs.
+
+Add Sentry init for server & client:
+
+// sentry.server.config.ts
+import * as Sentry from "@sentry/nextjs";
+Sentry.init({
+  dsn: process.env.SENTRY_DSN,
+  tracesSampleRate: 0.1,
+  environment: process.env.NODE_ENV,
+});
+
+
+Upload sourcemaps during CI build.
+
+Alerts
+
+Error rate spike > X% -> PagerDuty/Slack channel.
+
+Latency SLO breach for POST /api/chat (p95 > 1.5s) -> alert.
+
+Circuit breaker opens -> alert.
+
+Scrubbing
+
+Do not send any PII or API keys in error payloads.
+
+Mask user messages or save hashed versions before sending to Sentry if needed for debugging.
+
+8) CI/CD — GitHub Actions + Cloudflare + Sentry sourcemaps
+Example .github/workflows/deploy.yml
+name: CI/CD
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  test-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: node-version: '20'
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run test
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_OPENAI_API_KEY: ${{ secrets.NEXT_PUBLIC_OPENAI_API_KEY }}
+      - name: Upload sourcemaps to Sentry
+        run: |
+          npx @sentry/cli releases new ${{ github.sha }}
+          npx @sentry/cli releases files ${{ github.sha }} upload-sourcemaps .next --rewrite
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
+          projectName: my-pages-project
+
+Health-check post-deploy
+
+After deploy, run a curl to /api/health. If fails, rollback or alert.
+
+9) Testing & resilience validation
+Unit tests
+
+Jest for route handlers and lib functions; mock external SDKs (OpenAI, Pinecone, Notion).
+
+Integration tests
+
+Run API locally (wrangler dev or Next dev) and call endpoints to validate wiring.
+
+E2E
+
+Playwright or Cypress for UI flows: open site, open chat, send question, expect response.
+
+Resilience tests
+
+Simulate OpenAI outage: make route handler return 500 -> assert fallback to Ollama is used and response is valid.
+
+Circuit-breaker tests: flood API with failures to assert circuit opens and closes properly.
+
+Synthetic monitoring
+
+GitHub Action nightly job calls /api/health and records metrics.
+
+10) Gemini CLI — Project context memory & MCP security
+.gemini/settings.json (critical)
+{
+  "contextFileName": "GEMINI.md",
+  "safetyLevel": "BLOCK_HIGH",
+  "autoAccept": false,
+  "checkpointing": { "enabled": true },
+  "mcpServers": {
+    "securityPolicyServer": {
+      "command": "node",
+      "args": ["mcp/security-checker.js"],
+      "cwd": "./mcp",
+      "timeout": 10000
+    }
+  }
+}
+
+GEMINI.md (project memory)
+# GEMINI Memory — AI-Portfolio
+
+Project: AI-Portfolio (Next.js, OpenAI primary, Ollama fallback with Gemma-3-270M)
+Security rules:
+- Enforce HTTPS for all endpoints
+- All API calls must go through API Gateway layer (Cloudflare Workers)
+- Inputs sanitized against XSS/SQL/Command injection
+- Rate limits: 60req/min/IP (chat) 10req/min/user (heavy endpoints)
+- Circuit breakers wrap external services with thresholds 5 failures / 60s
+- Fallback order: OpenAI -> Ollama -> Cache -> user-friendly offline message
+
+MCP security-checker (sketch)
+
+mcp/security-checker.js (Node)
+
+Runs static checks on proposed diffs:
+
+presence of https usage
+
+usage of process.env for secrets (no hardcoded keys)
+
+inclusion of input validation for new endpoints
+
+Returns pass/fail to Gemini CLI.
+
+11) Compliance mapping (quick)
+OWASP Top 10 (how we mitigate)
+
+A1: Broken Access Control: enforce RBAC, token scopes, server-side checks.
+
+A2: Cryptographic Failures: TLS enforced, keys rotated, secrets in GH Secrets.
+
+A3: Injection: input validation + sanitization + parameterized DB calls.
+
+A7: XSS: Content Security Policy, sanitize rendered HTML.
+
+A8: CSRF: CSRF tokens for stateful endpoints or enforce same-site cookie.
+(And so on.)
+
+SOC 2 (controls)
+
+Access control policies, change management via GitHub, audit logs (Sentry & custom), incident response documented.
+
+GDPR (privacy)
+
+Data mapping: what PII we store; retention policy; deletion flow; legal basis for processing.
+
+Provide user data export & delete endpoints for compliance.
+
+12) Operational runbook (essentials)
+Key rotation
+
+Rotate keys every 90 days.
+
+Use script to update Cloudflare Secrets & GitHub Secrets (manual approval required).
+
+Post-rotation: run smoke test (/api/health).
+
+Incident steps (high level)
+
+Triage: Sentry alerts -> run snapshot of failing requests.
+
+Fallback activation: enable feature flag to force fallback to Ollama.
+
+If suspected credential leak: rotate keys, revoke old tokens.
+
+Postmortem: record timeline, fix root cause, update tests.
+
+13) Paste-ready code snippets & configs
+.env.example
+NEXT_PUBLIC_OPENAI_API_KEY=sk-xxxxx
+PINECONE_API_KEY=pc-xxxxx
+PINECONE_ENVIRONMENT=us-east1-gcp
+PINECONE_INDEX=ai-portfolio-index
+NOTION_API_KEY=secret_xxx
+NOTION_DATABASE_ID=some-db-id
+OLLAMA_BASE_URL=http://localhost:11434/v1
+SENTRY_DSN=https://example@sentry.io/123
+FEATURE_OLLAMA_FALLBACK=true
+
+app/api/chat/route.ts (TypeScript: OpenAI -> fallback Ollama)
+import { NextRequest, NextResponse } from "next/server";
+import OpenAI from "openai";
+
+export const runtime = "edge";
+
+const openai = new OpenAI({ apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY });
+const ollama = new OpenAI({ baseURL: process.env.OLLAMA_BASE_URL, apiKey: "ollama" });
+
+async function retryWithBackoff(fn: () => Promise<any>, retries = 3) {
+  let attempt = 0;
+  while (true) {
+    try { return await fn(); }
+    catch (err) {
+      if (++attempt > retries) throw err;
+      const delay = Math.pow(2, attempt) * 200 + Math.random() * 100;
+      await new Promise(r => setTimeout(r, delay));
+    }
+  }
+}
+
+export async function POST(req: NextRequest) {
+  const { messages, model } = await req.json();
+  try {
+    // Primary: OpenAI
+    const resp = await retryWithBackoff(() => openai.chat.completions.create({ model: model ?? "gpt-4o-mini", messages }));
+    return NextResponse.json(resp);
+  } catch (openaiErr) {
+    // Circuit breaker / fallback to Ollama if enabled
+    if (process.env.FEATURE_OLLAMA_FALLBACK === "true") {
+      try {
+        const resp = await ollama.chat.completions.create({ model: model ?? "gemma-3-270m-it-GGUF", messages });
+        return NextResponse.json(resp);
+      } catch (ollamaErr) {
+        return NextResponse.json({ error: "LLM failure" }, { status: 503 });
+      }
+    }
+    return NextResponse.json({ error: "OpenAI unavailable" }, { status: 502 });
+  }
+}
+
+Simple circuit breaker (lib/circuitBreaker.ts)
+type State = "CLOSED"|"OPEN"|"HALF_OPEN";
+
+export class CircuitBreaker {
+  private failures = 0;
+  private state: State = "CLOSED";
+  constructor(private failureThreshold=5, private cooldown=60_000) {}
+  recordFailure() {
+    this.failures++;
+    if (this.failures >= this.failureThreshold) {
+      this.state = "OPEN";
+      setTimeout(()=>{ this.state = "HALF_OPEN"; this.failures = 0; }, this.cooldown);
+    }
+  }
+  ok() { if (this.state === "OPEN") throw new Error("circuit open"); }
+}
+
+Health endpoint app/api/health/route.ts
+import { NextResponse } from "next/server";
+export const runtime = "edge";
+export async function GET() {
+  const results = { openai: false, pinecone: false, ollama: false };
+  try {
+    // cheap call or ping
+    results.openai = !!process.env.NEXT_PUBLIC_OPENAI_API_KEY;
+    results.pinecone = !!process.env.PINECONE_API_KEY;
+    // ping ollama if enabled
+    if (process.env.FEATURE_OLLAMA_FALLBACK === "true") {
+      const r = await fetch(`${process.env.OLLAMA_BASE_URL}/models`);
+      results.ollama = r.ok;
+    }
+  } catch (e) {}
+  const ok = results.openai || results.ollama;
+  return NextResponse.json({ ok, results }, { status: ok ? 200 : 503 });
+}
+
+Example LangChain agent skeleton (lib/langchain/agent.ts)
+import { AgentExecutor, Tool } from "langchain/agents";
+import { OpenAI } from "openai"; // or langchain LLM wrapper
+import { PineconeClient } from "@pinecone-database/pinecone";
+
+export async function runAgent(query: string) {
+  // tools
+  const pine = new PineconeClient();
+  await pine.init({ apiKey: process.env.PINECONE_API_KEY, environment: process.env.PINECONE_ENVIRONMENT });
+  const tools: Tool[] = [
+    new Tool({ name: "pinecone_search", func: async (q) => {
+      const idx = pine.Index(process.env.PINECONE_INDEX!);
+      const r = await idx.query({ topK: 5, vector: q.vector });
+      return r;
+    }})
+  ];
+  const agent = await AgentExecutor.fromAgentAndTools({
+    agent: /* build agent with planner */,
+    tools
+  });
+  return await agent.invoke({ input: query });
+}
+
+wrangler.toml (Cloudflare)
+name = "ai-portfolio"
+compatibility_date = "2025-08-20"
+type = "javascript"
+account_id = "your-account-id"
+workers_dev = false
+[env.production]
+route = "ai.yourdomain.com/*"
+vars = { OPENAI_API_KEY = "${OPENAI_API_KEY}" }
+
+14) Final checklist — production readiness
+
+ All route handlers run server-side; no API keys in client bundles
+
+ POST /api/chat with circuit breakers + backoffs + fallback to Ollama
+
+ GET /api/health for synthetic monitors
+
+ Pinecone upsert/query endpoints behind auth and rate limits
+
+ Notion read-only endpoints for project content (write admin-only flows)
+
+ Sentry integrated, sourcemaps uploaded at CI build
+
+ GitHub Actions pipeline with lint/test/build/deploy + health check
+
+ Gemini .gemini/settings.json + GEMINI.md and MCP security-checker implemented
+
+ Compliance docs (OWASP, SOC2, GDPR) in docs/
+
+ Tests (unit/integration/E2E) added and passing in CI
+
+ Feature flags for toggling heavy features (OLLAMA_FALLBACK, AGENT_ENABLED)
+
+ Rate limits and Cloudflare rules configured
+
+✅ Task list
+
+Add GET /api/health route.
+
+Implement lib/circuitBreaker.ts and wire into POST /api/chat.
+
+Add retry-with-backoff utility and integrate into external SDK calls.
+
+Create a LangChain agent example (lib/langchain/agent.ts) with Pinecone tool.
+
+Add Sentry initialization files and CI sourcemap upload step.
+
+Create .gemini/settings.json and GEMINI.md. Add basic mcp/security-checker.js.
+
+Add Jest + Playwright tests; wire to GitHub Actions.
+
+Add SECURITY.md mapping OWASP/SOC2/GDPR.
+
+Configure Cloudflare rate limiting & WAF rules.
+
+Document everything in docs/ and update README.md.
+
+📂 Folder structure (recommended)
+ai-portfolio/
+├── app/
+│   ├── api/
+│   │   ├── chat/route.ts
+│   │   ├── health/route.ts
+│   │   ├── pinecone/route.ts
+│   │   └── notion/route.ts
+│   ├── layout.tsx
+│   └── page.tsx
+├── lib/
+│   ├── circuitBreaker.ts
+│   ├── retry.ts
+│   └── langchain/
+│       └── agent.ts
+├── src/
+│   ├── services/
+│   │   ├── openai.server.ts
+│   │   ├── ollama.server.ts
+│   │   ├── pinecone.server.ts
+│   │   └── notion.server.ts
+├── mcp/
+│   └── security-checker.js
+├── .github/workflows/
+│   └── deploy.yml
+├── .gemini/
+│   └── settings.json
+├── docs/
+│   └── DEEP_RESEARCH.md
+├── .env.example
+├── wrangler.toml
+├── next.config.js
+└── README.md
+
+🔁 Sprint model (2-week agile-ish, compressable)
+
+Sprint 0 (1 day): Scaffold health endpoint, circuit breaker util, retry util.
+
+Sprint 1 (2 days): Implement POST /api/chat primary+fallback logic and wire to UI chat component. Add basic tests.
+
+Sprint 2 (2 days): LangChain Agent POC that queries Pinecone and Notion. Add feature flagging for agent usage.
+
+Sprint 3 (2 days): Observability: Sentry install, CI sourcemap upload, basic alerts.
+
+Sprint 4 (2 days): Security hardening: WAF rules, rate limiting, CSP, OWASP checklist.
+
+Sprint 5 (1 day): Gemini MCP integration and mcp/security-checker script.
+
+Sprint 6 (1 day): E2E tests & synthetic monitoring cron. Final docs and production roll.
+
+🧠 Architecture (recap)
+
+Edge-first: Cloudflare Pages + Workers for low latency.
+
+Route Handler pattern: server-side API calls, no secret exposure.
+
+Resilient LLM stack: OpenAI (cloud) + Ollama+Gemma270M (local fallback) + Pinecone retrieval.
+
+Agent orchestration: LangChain for multi-step workflows; MCP/Smithery for tool discovery and extensibility.
+
+DevSecOps: Sentry, CI, health checks, circuit breakers, secret rotation, and compliance mapping.
+
+
+
+Solid move—Gemma 3 270M is a powerhouse for your HP 250 G10 setup. It’s lightweight (~200–300 MB in GGUF format) but still punches above its weight with robust multilingual and reasoning capabilities. Let’s map out how to integrate it into your AI-portfolio with military-grade best practices.
+
+Why Gemma 3 270M is the right fit for your machine
+
+Small & efficient: The 270M variant is tiny compared to 1B+ models, ideal for 8 GB RAM setups.
+
+Multimodal-ready: Although this version is text-only, Gemma 3’s architecture supports vision in larger sizes—future-proof if you add file/image analysis.
+
+Generous context: Supports up to 32K tokens context window, plenty for chat sessions. 
+Hugging Face
+Unsloth Docs
+
+Open & optimized: Distributed as GGUF, ready for tools like llama.cpp, Ollama, Open WebUI—fine-tuned for low-memory devices. 
+Unsloth Docs
+Hugging Face
+
+Best Practices for Gemma 3 270M Integration
+1. Deployment Path: No Cloud strain, all inference local.
+
+Set up in your repo:
+
+npx shadcn-ui init # scaffolding remains
+npm install ollama
+# Add Gemma 270M GGUF via huggingface (download to ./models/)
+
+
+Define route handler fallback hierarchy:
+
+// app/api/chat/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import OpenAI from "openai";
+import OpenAIlocal from "openai"; // for Gemma via Ollama local
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const gemma = new OpenAI({
+  baseURL: "http://localhost:11434/v1",
+  apiKey: "ollama",
+});
+
+export async function POST(req: NextRequest) {
+  const { messages, model = "gemma-3-270m-it-GGUF" } = await req.json();
+  try {
+    return NextResponse.json(
+      await openai.chat.completions.create({ messages, model, stream: false })
+    );
+  } catch (e) {
+    return NextResponse.json(
+      await gemma.chat.completions.create({ messages, model })
+    );
+  }
+}
+
+2. Quantization & Hardware Fit
+
+Gemma is already quantized (GGUF). For even lighter options:
+
+Explore 4-bit Quant — but hold off unless you add GPU (8 GB is borderline anyway).
+
+QLoRA / SqueezeLLM are neat but overkill for 270M. 
+arXiv
++1
+
+3. LLMTuning & Inference Tuning
+
+Apply recommended parameters from Unsloth docs:
+
+Temperature: 1.0
+
+Top_K: 64
+
+Top_P: 0.95
+
+Repetition Penalty: 1.0
+
+Run through llama.cpp or Ollama — optimized for float16 inference. 
+Unsloth Docs
+
+4. Memory Handling & Graceful Fallbacks
+
+Since your machine is tight:
+
+Scrub context length to ~512 tokens for active use.
+
+Use circuit-breakers before hitting OpenAI to prevent freezes.
+
+Log fallback events in Sentry for observability.
+
+5. CI & DevOps Impact
+
+Local fallback means your dev experience stays smooth offline. In CI/CD, you can install Gemma optionally:
+
+- name: Install models (optional)
+  run: |
+    ollama pull gemma-3-270m-it-GGUF || true
+
+
+Then use it if available, else use remote OpenAI.
+
+Summary Roadmap
+Step	Action
+1. Download model	Get gemma-3-270m-it-GGUF.gguf into models/
+2. Configure route fallback	Use Next.js route handler with OpenAI then Gemma logic
+3. Set inference params	Tune temp=1.0, top_k=64, top_p=0.95
+4. Handle resource limits	Circuit-breakers, limited context
+5. Monitor & CI options	Sentry logs, optional pull in CI
+
+You’re not just avoiding overwhelm—you’re building a low-footprint, locally resilient AI stack. Ready for best-in-class self-hosted inference without kernel panics.
+
+
+
+
+
+
+
+
+
+
+
+a research-grade documentation suite around your AI portfolio project, so it’s production-ready, security-hardened, and maintainable.
+
+I’ll break it into modular markdown docs, each scoped for a single responsibility.
+This way your Gemini CLI (and human collaborators) can reason about the system without ambiguity.
+
+📚 Documentation Plan
+1. README.md (Entry Point)
+
+Project overview & goals
+
+High-level system diagram (Mermaid)
+
+Quick start guide (local + Cloudflare deploy)
+
+Feature list (AI chatbot, portfolio cards, PDF→Markdown)
+
+Tech stack (Next.js, Tailwind, ShadCN, OpenAI, Pinecone, Notion, Gemma local fallback)
+
+2. ARCHITECTURE.md
+
+System design overview
+
+Next.js App Router structure
+
+API routes:
+
+/api/chat → AI orchestration (OpenAI + Gemma fallback)
+
+/api/notion → content sync
+
+/api/pinecone → semantic search
+
+Local inference fallback design (Gemma 270M GGUF on Ollama)
+
+CI/CD pipeline design (GitHub Actions → Cloudflare Pages)
+
+Mermaid diagrams:
+
+Component tree
+
+API flow
+
+Deployment pipeline
+
+3. SECURITY.md
+
+Security posture statement (military-grade 🪖)
+
+Standards: OWASP, SOC2, GDPR, NIST
+
+Controls:
+
+SSL/TLS enforced
+
+Rate limiting / API Gateway
+
+RSL (role-based security layer) for API keys
+
+XSS/CSRF hardening (Next.js built-ins + Helmet headers)
+
+DDoS mitigation with Cloudflare WAF
+
+Secrets management: GitHub → Cloudflare KV (never hardcoded)
+
+Threat model diagram (Mermaid)
+
+4. API.md
+
+Reference for:
+
+/api/chat → Request/Response examples
+
+/api/notion → CRUD content sync
+
+/api/pinecone → Embedding upserts/search
+
+Authentication flow (bearer token, proxy gateway)
+
+Error handling & fallback logic
+
+5. AGENT_DESIGN.md
+
+LangChain agent breakdown
+
+Tools:
+
+Notion connector
+
+Pinecone vector search
+
+PDF loader (pdfjs-dist → Markdown)
+
+Control flow:
+
+Prompt injection defenses
+
+Tool calling strategy (react-style vs plan-exec)
+
+AI policy: when to use OpenAI vs Gemma local
+
+6. DEVSECOPS.md
+
+GitHub Actions workflows (lint → test → build → deploy)
+
+SAST/DAST tools integrated (CodeQL, OWASP ZAP scan)
+
+Dependency scanning (npm audit, Renovate)
+
+Cloudflare deployment recipe
+
+Logging/monitoring (Sentry + Cloudflare logs)
+
+Recovery: automated rollback
+
+7. COMPLIANCE.md
+
+GDPR: user data minimization, right-to-forget
+
+SOC2: logging, monitoring, incident response
+
+OWASP: checklist applied across endpoints
+
+Military-grade checklist (SSL, RSL, DDOS, API gateway, proxy fallback)
+
+8. TESTING.md
+
+Unit tests (Jest + React Testing Library)
+
+Integration tests for API routes (Supertest)
+
+AI behavior tests (deterministic prompts for Gemma)
+
+Security regression tests (XSS injection, rate limit bypass)
+
+CI hooks: block merges if tests fail
+
+9. DIAGRAMS/
+
+System overview diagram
+
+Threat model diagram
+
+CI/CD pipeline diagram
+
+API flow sequence diagram
+
+✅ Next Steps
+
+ all of these markdown files with boilerplate + Mermaid diagrams pre-baked, so you just fill in evolving details as you build.
+
+ draft the first batch of these files (README.md + ARCHITECTURE.md + SECURITY.md) so you immediately have a Google/OpenAI-style project doc set in repo
+
+
+
+
+🔗 Data Flow Overview
+
+Frontend (Next.js + Tailwind) → user interacts with UI.
+
+Next.js API Routes → handle requests, decide whether to call OpenAI cloud or your local Gemma model.
+
+llama.cpp server → serves Gemma (GGUF) locally via OpenAI-compatible API.
+
+Fallback/Hybrid → if local fails or you need more power, fallback to OpenAI / Pinecone / Notion APIs.
+
+📊 Mermaid Diagram
+flowchart TD
+    A[User Browser UI<br>(Next.js + Tailwind)] --> B[API Routes<br>(Next.js Serverless)]
+    B -->|Local Inference| C[llama.cpp<br>Gemma 3 270M GGUF]
+    B -->|Remote Calls| D[OpenAI API / Pinecone / Notion]
+    C --> B
+    D --> B
+    B --> E[Response to User]
+
+🪖 Security Layers (where your "military-grade" rules apply)
+
+Browser → Next.js API: HTTPS + Rate limiting + XSS/CSRF protection.
+
+Next.js API → llama.cpp: Localhost only, proxied, with timeout + circuit-breakers.
+
+Next.js API → External APIs: Use API Gateway / Proxy + Env secrets managed via GitHub Actions + Cloudflare Pages.
+
+Every endpoint: Logging, monitoring, and fallback logic.
+
+⚡ Why this is clean
+
+Front stays serverless & light → deployable to Cloudflare Pages.
+
+Inference is hybrid → cheap local Gemma, with cloud fallback.
+
+Security baked in → SSL, rate-limiting, and secrets kept safe in .env (not shipped to client).
+
+🦙 What is llama.cpp?
+
+It’s an open-source C++ project that lets you run large language models (LLMs) locally on your machine (CPU or GPU).
+
+Originally built to run Meta’s LLaMA models, but now supports a bunch of open LLMs (including Gemma, Mistral, Phi, etc.), especially in the GGUF format.
+
+It’s optimized for low-resource environments (like your HP 250 G10 laptop with 8 GB RAM) through techniques like:
+
+Quantization → reduces memory footprint by storing weights in lower precision (e.g. 4-bit, 8-bit).
+
+KV cache → speeds up token generation by caching prior results.
+
+CPU vectorization (SIMD, AVX, Neon) → squeezes performance from ordinary processors.
+
+🛠 Why it’s useful for you
+
+Runs entirely offline → great for security and privacy (no API calls leaving your device).
+
+Super lightweight compared to TensorFlow/PyTorch-based inference servers.
+
+Has an OpenAI-compatible API server mode, meaning you can hit it with the same client libraries you’d use for openai or langchain.
+
+Community-supported → widely used in production-ish local setups.
+
+🔗 Example Workflow with llama.cpp
+
+Convert or download a model in GGUF format (Gemma 270M already comes in GGUF).
+
+Run llama.cpp locally to serve the model:
+
+./server -m models/gemma-3-270m-it.gguf --port 8000
+
+
+Query it like you would OpenAI:
+
+curl http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gemma-3-270m-it",
+    "messages": [{"role": "user", "content": "Hello, what can you do?"}]
+  }'
+
+
+
+
+picked (C) LangChain + MCP agent example. Below is a production-minded, drop-in implementation that:
+
+Implements a lightweight AgentExecutor (no fragile LangChain API surface assumptions) using OpenAI as the planner + responder.
+
+Provides two tools: PineconeTool (vector query/upsert) and MCPTool (Smithery / MCP skill invoker).
+
+Adds retries + circuit-breaker logic for robustness and fallbacks.
+
+Includes a Next.js route handler (app/api/agent/route.ts) to call the agent server-side (route handler runs on the server/edge).
+
+Uses TypeScript, strict types, clear comments, and sensible defaults so you can extend to full LangChain later.
+
+Why this approach? LangChain APIs change often; this custom executor is simple to reason about, easy to test, and mirrors the AgentExecutor idea (plan → execute tools → synthesize). It also gives you control over retries, timeouts, and fallback to Ollama/OpenAI.
+
+Files to add / edit
+
+Create these files (paths are relative to repo root). I give full code — paste into your repo.
+
+1) lib/langchain/tools/pineconeTool.ts
+// lib/langchain/tools/pineconeTool.ts
+import { PineconeClient, ScoredVector } from "@pinecone-database/pinecone";
+
+let pinecone: PineconeClient | null = null;
+
+async function initPinecone() {
+  if (pinecone) return pinecone;
+  pinecone = new PineconeClient();
+  await pinecone.init({
+    apiKey: process.env.PINECONE_API_KEY!,
+    environment: process.env.PINECONE_ENVIRONMENT!,
+  });
+  return pinecone;
+}
+
+export type PineconeToolPayload = {
+  indexName: string;
+  vector?: number[]; // query vector
+  topK?: number;
+  metadataFilter?: Record<string, any>;
+  upsertItems?: Array<{ id: string; values: number[]; metadata?: Record<string, any> }>;
+};
+
+export const PineconeTool = {
+  name: "pinecone",
+  description: "Query or upsert vectors in Pinecone. Provide indexName and either vector (query) or upsertItems.",
+  async call(payload: PineconeToolPayload) {
+    const client = await initPinecone();
+    if (!payload.indexName) throw new Error("pinecone: indexName required");
+
+    const idx = client.Index(payload.indexName);
+
+    if (payload.upsertItems && payload.upsertItems.length) {
+      await idx.upsert({
+        upsertRequest: {
+          vectors: payload.upsertItems.map((it) => ({
+            id: it.id,
+            values: it.values,
+            metadata: it.metadata,
+          })),
+        },
+      });
+      return { status: "upserted", count: payload.upsertItems.length };
+    }
+
+    if (payload.vector) {
+      const res = await idx.query({
+        queryRequest: {
+          topK: payload.topK ?? 5,
+          vector: payload.vector,
+          includeMetadata: true,
+          includeValues: false,
+          filter: payload.metadataFilter,
+        },
+      });
+      // normalize
+      const matches = (res.matches ?? []).map((m: any) => ({
+        id: m.id,
+        score: (m as ScoredVector).score,
+        metadata: m.metadata,
+      }));
+      return { matches };
+    }
+
+    throw new Error("pinecone: either vector or upsertItems must be supplied");
+  },
+};
+
+2) lib/langchain/tools/mcpTool.ts
+// lib/langchain/tools/mcpTool.ts
+// MCP / Smithery tool: call remote MCP/skill endpoints.
+// The MCP server should expose an HTTP API: POST /invoke with {skill, input}
+export const MCPTool = {
+  name: "mcp",
+  description:
+    "Call an MCP/Smithery skill. Provide skill name and input. MCP_BASE_URL must be set in env.",
+  async call(payload: { skill: string; input?: any }) {
+    const base = process.env.MCP_BASE_URL;
+    if (!base) throw new Error("MCPTool: MCP_BASE_URL not configured");
+    if (!payload.skill) throw new Error("MCPTool: skill name required");
+
+    const url = `${base.replace(/\/$/, "")}/invoke`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ skill: payload.skill, input: payload.input ?? {} }),
+    });
+
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(`MCPTool: ${json?.error ?? res.statusText}`);
+    }
+    return json;
+  },
+};
+
+3) lib/langchain/agent.ts
+// lib/langchain/agent.ts
+/**
+ * Simple AgentExecutor:
+ * 1) Ask planner LLM to return a JSON plan of tool calls
+ * 2) Execute tools in sequence with retries and circuit-breakers
+ * 3) Send intermediate steps + tool outputs back to LLM to synthesize final answer
+ *
+ * This avoids hard dependency on a specific LangChain JS API surface
+ */
+
+import OpenAI from "openai";
+import { PineconeTool } from "./tools/pineconeTool";
+import { MCPTool } from "./tools/mcpTool";
+
+type ToolDef = {
+  name: string;
+  description: string;
+  call: (payload: any) => Promise<any>;
+};
+
+type PlanStep = {
+  tool: string;
+  input: any;
+  note?: string;
+};
+
+export type AgentOptions = {
+  plannerModel?: string; // model for planning (e.g. "gpt-4o-mini" or "gpt-4o-mini" hosted)
+  responderModel?: string; // model for final response
+  maxPlanSteps?: number;
+  timeoutMs?: number;
+  retry?: { retries: number; backoffMs: number };
+};
+
+const DEFAULT_OPTIONS: AgentOptions = {
+  plannerModel: process.env.OPENAI_PLANNER_MODEL ?? "gpt-4o-mini",
+  responderModel: process.env.OPENAI_RESPONDER_MODEL ?? "gpt-4o-mini",
+  maxPlanSteps: 6,
+  timeoutMs: 60_000,
+  retry: { retries: 2, backoffMs: 500 },
+};
+
+const TOOLS: ToolDef[] = [PineconeTool as any, MCPTool as any];
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+/** Simple retry wrapper */
+async function withRetries<T>(fn: () => Promise<T>, retries: number, backoffMs: number): Promise<T> {
+  let attempt = 0;
+  while (true) {
+    try {
+      return await fn();
+    } catch (err) {
+      attempt++;
+      if (attempt > retries) throw err;
+      await new Promise((r) => setTimeout(r, backoffMs * attempt));
+    }
+  }
+}
+
+/** Circuit breaker */
+const CIRCUIT_OPEN: Record<string, { opensAt: number; untilMs: number }> = {};
+function isCircuitOpen(key: string) {
+  const s = CIRCUIT_OPEN[key];
+  if (!s) return false;
+  return Date.now() < s.opensAt + s.untilMs;
+}
+function openCircuit(key: string, ttlMs = 60_000) {
+  CIRCUIT_OPEN[key] = { opensAt: Date.now(), untilMs: ttlMs };
+}
+
+export class AgentExecutor {
+  opts: AgentOptions;
+  tools: Record<string, ToolDef>;
+
+  constructor(options?: Partial<AgentOptions>) {
+    this.opts = { ...DEFAULT_OPTIONS, ...(options ?? {}) };
+    this.tools = {};
+    for (const t of TOOLS) this.tools[t.name] = t;
+  }
+
+  /** Ask planner model to produce a JSON plan.
+   * The planner MUST return JSON like: { steps: [{ tool: "pinecone", input: {...} }, ...] }.
+   */
+  async plan(input: string): Promise<PlanStep[]> {
+    const prompt = [
+      { role: "system", content: "You are an agent planner. Output only valid JSON." },
+      {
+        role: "user",
+        content:
+          "Produce a JSON plan (object) with key `steps` (array). Each step must include `tool` (one of: pinecone, mcp) and `input` (object). Keep steps short and <= " +
+          this.opts.maxPlanSteps +
+          ".\n\nUser request:\n" +
+          input,
+      },
+    ];
+
+    const resp = await openai.chat.completions.create({
+      model: this.opts.plannerModel!,
+      messages: prompt,
+      temperature: 0.0,
+    });
+
+    const text = resp.choices?.[0]?.message?.content ?? "";
+    // parse JSON robustly
+    let json: any = null;
+    try {
+      json = JSON.parse(text);
+    } catch (e) {
+      // try to extract JSON substring
+      const match = text.match(/\{[\s\S]*\}/);
+      if (match) {
+        try {
+          json = JSON.parse(match[0]);
+        } catch (e2) {
+          throw new Error("Planner returned non-JSON response: " + text);
+        }
+      } else {
+        throw new Error("Planner returned non-JSON response and no JSON found: " + text);
+      }
+    }
+    const steps: PlanStep[] = Array.isArray(json.steps) ? json.steps : [];
+    if (steps.length > this.opts.maxPlanSteps!) steps.splice(this.opts.maxPlanSteps);
+    return steps;
+  }
+
+  /** Execute a single step with retries and circuit-breakers */
+  async execStep(step: PlanStep) {
+    const tool = this.tools[step.tool];
+    if (!tool) throw new Error(`Unknown tool: ${step.tool}`);
+    // Circuit key per tool
+    if (isCircuitOpen(tool.name)) {
+      throw new Error(`Circuit open for tool ${tool.name}`);
+    }
+
+    try {
+      const out = await withRetries(
+        () => tool.call(step.input),
+        this.opts.retry!.retries,
+        this.opts.retry!.backoffMs
+      );
+      return { ok: true, output: out };
+    } catch (err: any) {
+      // open circuit on repeated failure
+      openCircuit(tool.name, 60_000 /* 60s default; tune */);
+      return { ok: false, error: String(err.message ?? err) };
+    }
+  }
+
+  /** Run full agent flow */
+  async invoke(userInput: string) {
+    // 1) plan
+    const steps = await this.plan(userInput);
+
+    // 2) execute steps sequentially and collect results
+    const stepResults: Array<{ step: PlanStep; result: any }> = [];
+    for (const step of steps) {
+      const res = await this.execStep(step);
+      stepResults.push({ step, result: res });
+    }
+
+    // 3) synthesize final answer by giving LLM the original prompt + tool outputs
+    const synthesisPrompt = [
+      { role: "system", content: "You are an assistant that composes final answers using tool outputs." },
+      { role: "user", content: "User request:\n" + userInput },
+      {
+        role: "assistant",
+        content:
+          "Tool outputs:\n" +
+          stepResults
+            .map(
+              (r, i) =>
+                `STEP ${i + 1} - tool: ${r.step.tool}\ninput: ${JSON.stringify(r.step.input)}\noutput: ${JSON.stringify(
+                  r.result
+                )}`
+            )
+            .join("\n\n"),
+      },
+    ];
+
+    const finalResp = await openai.chat.completions.create({
+      model: this.opts.responderModel!,
+      messages: synthesisPrompt,
+      temperature: 0.2,
+      max_tokens: 800,
+    });
+
+    const finalText = finalResp.choices?.[0]?.message?.content ?? "";
+    return { answer: finalText, steps: stepResults };
+  }
+}
+
+4) app/api/agent/route.ts (Next.js App Router route handler)
+// app/api/agent/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { AgentExecutor } from "../../../lib/langchain/agent";
+
+export const runtime = "edge"; // or 'nodejs' depending on your Cloudflare/hosting choice
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { input } = body;
+    if (!input) return NextResponse.json({ error: "input required" }, { status: 400 });
+
+    const agent = new AgentExecutor({
+      // optional overrides
+      plannerModel: process.env.OPENAI_PLANNER_MODEL,
+      responderModel: process.env.OPENAI_RESPONDER_MODEL,
+    });
+
+    const out = await agent.invoke(String(input));
+    return NextResponse.json({ ok: true, result: out }, { status: 200 });
+  } catch (err: any) {
+    // Be careful not to leak secrets
+    console.error("agent route error:", err);
+    return NextResponse.json({ error: String(err?.message ?? err) }, { status: 500 });
+  }
+}
+
+Environment variables (add to Cloudflare / GitHub Secrets / .env.local for local dev)
+OPENAI_API_KEY=sk-...
+OPENAI_PLANNER_MODEL=gpt-4o-mini
+OPENAI_RESPONDER_MODEL=gpt-4o-mini
+PINECONE_API_KEY=...
+PINECONE_ENVIRONMENT=us-west1-gcp
+MCP_BASE_URL=https://mcp.example.com   # optional (Smithery/MCP)
+
+
+If you want Ollama fallback for planner/responder, set OPENAI_BASE_URL to http://localhost:11434/v1 and OPENAI_API_KEY=ollama in local dev environment and update AgentExecutor to try local first — I kept cloud-first in this sample.
+
+How it works (quick flow)
+
+Client POSTs { input: "Help me find jobs that match my React skills" } to /api/agent.
+
+AgentExecutor.plan() asks the planner model to return a JSON plan of tool calls.
+
+Example returned plan:
+
+{
+  "steps": [
+    {"tool":"pinecone","input": {"indexName":"projects","vector":[0.12,0.3], "topK":5}},
+    {"tool":"mcp","input":{"skill":"job-matcher","input":{"skills":["react","typescript"]}}}
+  ]
+}
+
+
+Executor validates and runs each tool (with retries).
+
+Executor sends LLM the tool outputs and asks it to synthesize the final user-facing reply.
+
+Route returns { answer, steps }.
+
+Production & Best Practices (you asked for production-grade)
+
+Planner JSON safety: Use a restrictive planner prompt that instructs the LLM to output only JSON. The code attempts to salvage JSON if the LLM emits text + JSON.
+
+Timeouts: You should wrap tool calls and openai calls with timeouts (server/edge may have limits). The example uses timeoutMs option placeholder — add an abort controller if you deploy at the edge.
+
+Circuit Breakers: We open circuits on repeated tool failures to avoid cascading errors. Tune TTLs.
+
+Rate-limiting: Put API Gateway or Cloudflare rate limits in front of /api/agent.
+
+Auth: Restrict who can call /api/agent (session or API key).
+
+Logging & Observability: Instrument Sentry around agent.invoke and log step outcomes and fallback events (do not log user PII).
+
+Testing:
+
+Unit-test plan() by mocking openai.chat.completions.create to return deterministic plans.
+
+Integration test execStep with a local Pinecone test index or mocked client.
+
+MCP security: Validate skill names and sanitize inputs before passing to MCP.
+
+Fallback chain: Optionally prefer local Ollama for low-latency, set cloud as fallback (flip via feature flag).
+
+Quick setup / install commands
+# in your repo
+npm i openai @pinecone-database/pinecone
+# (if you use node-fetch or need polyfills, add them)
+# ensure TypeScript sees the new files; restart Next dev server
+
+Next steps I can do for you (pick any or ask for all)
+
+A. Wire up Ollama-first fallback in AgentExecutor (local model preferred, cloud fallback).
+
+B. Add timeouts (AbortController) for fetch/OpenAI calls for safe edge behavior.
+
+C. Add unit tests (Jest) and a sample test for planner + a mock pinecone tool.
+
+D. Convert this into a LangChain-compatible AgentExecutor if you want to switch later.
+
+E. Add Sentry instrumentation around the agent and a sample alert rule.
+
+
+
+
+🧠 System Design: AI Portfolio with Gemma + llama.cpp + Next.js
+flowchart TD
+    subgraph Client[🌐 Client: Browser UI]
+        A1[React + Next.js Pages] --> A2[Chat UI (Tailwind)]
+        A1 --> A3[Portfolio Showcase]
+        A1 --> A4[Resume Upload (PDF.js)]
+    end
+
+    subgraph Frontend[⚛️ Next.js App Layer]
+        A2 -->|User Messages| B1[API Route: /api/chat]
+        A4 -->|PDF Data| B2[API Route: /api/resume]
+        A3 -->|Project Queries| B3[API Route: /api/projects]
+    end
+
+    subgraph Backend[🚀 Serverless Functions]
+        B1 -->|Process| C1[Chat Controller]
+        B2 --> C2[Resume Analyzer]
+        B3 --> C3[Notion/Pinecone Proxy]
+
+        C1 -->|LLM Request| D1[(llama.cpp Server - Gemma-270M)]
+        C1 -->|Fallback| D2[(Ollama Runtime - local models)]
+        C1 -->|External| D3[(OpenAI Cloud API)]
+
+        C2 -->|Embedding Vectors| D4[Pinecone Vector DB]
+        C3 -->|CMS Content| D5[Notion API]
+    end
+
+    subgraph Infra[☁️ Infra & Security Layer]
+        E1[Cloudflare Pages: Hosting + Edge Functions]
+        E2[GitHub Actions: CI/CD Pipeline]
+        E3[Secrets: GitHub Encrypted ENV + Cloudflare KV]
+        E4[API Gateway + Proxy + Rate Limiting]
+
+        Backend --> E1
+        Frontend --> E1
+        E1 -->|Deploy| E2
+        E3 --> Backend
+        E4 --> Backend
+    end
+
+    subgraph Security[🛡 Security Standards]
+        S1[SSL/TLS Everywhere]
+        S2[Rate Limiting (Anti-DDOS)]
+        S3[XSS/CSRF Mitigation in Next.js]
+        S4[OWASP + SOC2 Controls]
+        S5[Audit Logging & Monitoring]
+
+        E4 --> S2
+        Frontend --> S3
+        Infra --> S1
+        Infra --> S4
+        Backend --> S5
+    end
+
+🔑 Flow Explanation
+
+User hits portfolio → React/Next.js frontend served by Cloudflare Pages.
+
+Chat request → /api/chat → Next.js API route.
+
+First tries llama.cpp server running Gemma-270M (lightweight, local inference).
+
+If Gemma is too small → fallback to Ollama runtime or OpenAI API.
+
+Resume upload → parsed via PDF.js, embeddings generated and stored in Pinecone.
+
+Projects & content → pulled from Notion API (CMS).
+
+Security layer → all API routes behind Cloudflare proxy + API Gateway → SSL, DDOS guard, rate limits, SOC2-style logging.
+
+CI/CD → GitHub Actions auto-build → Cloudflare deploy → secrets injected securely.
+
+🪖 Why this is military-grade tight
+
+Local-first LLM: llama.cpp runs Gemma on your laptop or small VM → cheap + private.
+
+Hybrid fallback: If Gemma fails → Ollama (bigger local models) or OpenAI (cloud scaling).
+
+API Gateway rules: Proxy all calls with rate limiting, logging, and retry/fallback.
+
+CI/CD: GitHub Actions enforces lint, tests, and secrets injection.
+
+Compliance: OWASP, SOC2, GDPR baked into SECURITY.md.
+
+This diagram is production-ready architecture, not a toy.
+
+ARCHITECTURE.md + SECURITY.md + API.md with this diagram embedded and rules formalized.
+
+https://developers.googleblog.com/en/introducing-gemma-3-270m/
+ollama run gemma3:270m
