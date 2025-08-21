@@ -1,0 +1,48 @@
+Let's break this down. Imagine I'm a senior engineer (what we call an "L7" at a place like Google) explaining my latest project to a bright, curious person😄
+
+
+. Let me tell you about this project I'm building. You know how in superhero movies, Tony Stark has Jarvis, an AI that runs his whole house, answers his questions, and helps him build cool stuff?
+
+Imagine if I could build a mini-Jarvis for your career.
+
+That's what this is. It's a super-smart website that does two main things:
+
+1. It's a Digital Museum of My Work
+Think of it like a super-interactive art gallery, but instead of paintings, it shows off all the computer programs and websites I've built.
+
+Each project gets its own "room" (we call it a ProjectCard) with pictures, descriptions, and a list of the tech-tools I used to build it (like TypeScript, React, etc.).
+
+The whole thing is powered by Notion—which is like a super-organized digital notebook—so I can just update my notebook and the website automatically changes. Magic!
+
+2. It Has a Brain That Learns From You (The Really Cool Part)
+This is the secret sauce. In the corner of the website, there's a friendly little chatbot. But this isn't a dumb chatbot that just gives pre-written answers.
+
+This one is alive. It learns.
+
+It's a Career Coach: You can tell it, "I don't know what job I want," and it will ask you about what you're good at and what you like. Then, it will use its giant brain to suggest awesome jobs you never even knew existed.
+
+It Can Read Your Resume: You can upload your resume (a PDF file), and it will instantly read it, like a teacher grading a paper, and tell you how to make it better to get your dream job.
+
+It Gets Smarter Every Day: This is my favorite part. The more people talk to it, the smarter it gets. If it gets something wrong and you correct it, it remembers that forever and won't make the same mistake again. It's like a digital plant that grows the more you water it with conversation.
+
+How Does The Magic Work? (The "How")
+Okay, you want to know how the sausage is made? Let's peek under the hood. It's like a team of specialized robots working together.
+
+The Brain (OpenAI / Ollama): This is the main engine. It's a powerful AI model, the same kind that powers ChatGPT. It does the thinking and talking. I also gave it a backup brain (Ollama) that can work on my own computer, so if the internet goes out, the chatbot doesn't get stupid.
+
+The Memory (Pinecone): You can't fit everything in your head, right? This AI can't either. So it uses a special database called Pinecone. This isn't for storing boring stuff like names and numbers; it's for storing ideas and concepts. It's how the chatbot remembers everything about every project and every career path.
+
+The Library (Notion API): All the info about my projects lives in my Notion notebook. The "Notion API" is like a librarian robot that fetches that information for the website whenever it's needed.
+
+The Interpreter (PDF.js): This is the little robot that can read and understand PDF files. It takes your resume, which is just a picture of words to a computer, and turns it into real text that the AI brain can actually understand and analyze.
+
+Why Am I Building This? (The "Why")
+As an engineer, this is the fun part. I'm not just building another website. I'm solving puzzles:
+
+The Puzzle of Learning: How do I make a machine learn from its mistakes in a real, meaningful way, not just memorize answers?
+
+The Puzzle of Reliability: How do I make sure it never goes down? If one part breaks (like the main AI), how does it instantly switch to a backup without you even noticing? (We call this a "circuit breaker").
+
+The Puzzle of Helpfulness: How do I take all this incredibly complex technology and make it simple, friendly, and actually useful for someone who just needs help figuring out their future?
+
+So, that's the project. It's not just a website. It's an experiment. It's a helper. It's my attempt to build a tiny piece of the future, right now, to see if I can use all this powerful AI tech to actually help people in a real way.

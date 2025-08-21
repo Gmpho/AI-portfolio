@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getChatCompletion, moderateContent, filterResponse } from '@/services/openaiService';
+import { extractSkills } from '@/utils/skillExtractor';
+import { getUserProfile, updateUserProfile, addMessageToHistory, generateCareerRecommendations } from '@/services/userService';
+import { ChatMessage } from '@/types/chat.d';
 
 // Simple in-memory store for rate limiting
 const userRequestCounts = new Map<string, { count: number; lastReset: number }>();
@@ -31,7 +34,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429 });
     }
 
-    const { message } = await request.json();
+    const { message, history = [] } = await request.json(); // Accept history array
+
+    // Combine history with the new message
+    const messages = [...history, { role: 'user', content: message }];
 
     // 1. Input Validation
     if (!message || typeof message !== 'string' || message.trim().length === 0) {
@@ -50,7 +56,7 @@ export async function POST(request: Request) {
     }
 
     // 3. Get Chat Completion (if input is valid and not flagged)
-    const aiResponse = await getChatCompletion([{ role: 'user', content: message }]);
+    const aiResponse = await getChatCompletion(messages); // Pass combined messages
 
     // 4. Response Filtering
     const { filteredText, flagged: responseFlagged, reason: responseReason } = filterResponse(aiResponse);
@@ -58,6 +64,31 @@ export async function POST(request: Request) {
       console.warn('AI response flagged by filtering:', responseReason);
       return NextResponse.json({ error: 'AI response contains content that violates our policies.' }, { status: 500 });
     }
+
+    // Add AI response to history
+    messages.push({ role: 'assistant', content: filteredText, id: Date.now().toString(), timestamp: new Date() });
+
+    // Update conversation history in user profile
+    addMessageToHistory({ role: 'user', content: message, id: Date.now().toString(), timestamp: new Date() });
+    addMessageToHistory({ role: 'assistant', content: filteredText, id: Date.now().toString(), timestamp: new Date() });
+
+
+    // 5. Skill Extraction
+    const extractedSkills = await extractSkills(messages);
+    if (extractedSkills.length > 0) {
+      console.log('Extracted skills:', extractedSkills);
+      // Update user profile with extracted skills
+      const currentUserProfile = getUserProfile();
+      const updatedSkills = Array.from(new Set([...currentUserProfile.skills, ...extractedSkills])); // Merge and deduplicate
+      updateUserProfile({ skills: updatedSkills });
+      console.log('User profile updated with new skills:', getUserProfile().skills);
+    }
+
+    // 6. Generate Career Recommendations (example - can be triggered conditionally)
+    const currentUserProfile = getUserProfile();
+    const careerRecommendations = await generateCareerRecommendations(currentUserProfile);
+    console.log('Career Recommendations:', careerRecommendations);
+
 
     return NextResponse.json({ response: filteredText });
 
