@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getChatCompletion, moderateContent, filterResponse, getEmbeddings } from '@/services/openaiService';
 import { extractSkills } from '@/utils/skillExtractor';
 import { getUserProfile, updateUserProfile, addMessageToHistory, generateCareerRecommendations } from '@/services/userService';
-import { ChatMessage } from '@/types/chat.d';
+import { ChatMessage } from '@/types';
 import { queryVectors } from '@/services/pineconeService';
 import { getProjectsFromNotion } from '@/services/notionService';
 import { getCompletion as getOllamaCompletion } from '@/services/ollamaService'; // Import Ollama completion
@@ -15,7 +15,7 @@ const MAX_REQUESTS_PER_WINDOW = 10; // Max 10 requests per minute
 export async function POST(request: Request) {
   try {
     // Rate Limiting
-    const ip = request.headers.get('x-forwarded-for') || request.ip;
+    const ip = request.headers.get('x-forwarded-for');
     if (!ip) {
       return NextResponse.json({ error: 'Unable to determine IP address for rate limiting.' }, { status: 500 });
     }

@@ -1,4 +1,4 @@
-interface ChatMessage {
+export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
@@ -11,7 +11,7 @@ interface ChatMessage {
   };
 }
 
-interface UserProfile {
+export interface UserProfile {
   skills: string[];
   experienceLevel: 'entry' | 'mid' | 'senior';
   jobPreferences: {

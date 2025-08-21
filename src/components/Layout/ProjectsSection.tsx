@@ -1,5 +1,5 @@
 import React from 'react';
-import ProjectCard, { ProjectCardProps } from '../ProjectCard/ProjectCard';
+import { ProjectCard } from '../ProjectCard';
 
 const projects: ProjectCardProps[] = [
   {

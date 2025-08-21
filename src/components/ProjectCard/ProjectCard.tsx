@@ -1,25 +1,49 @@
 import React from 'react';
+import { Project } from '@/types/project.d'; // Assuming Project is defined
 
-export type ProjectCardProps = {
-  title: string;
-  description: string;
-  tags: string[];
-};
+interface ProjectCardProps {
+  project: Project;
+}
 
-const ProjectCard: React.FC<ProjectCardProps> = ({ title, description, tags }) => {
+export const ProjectCard: React.FC<ProjectCardProps> = ({ project }) => {
   return (
-    <div className="border rounded-lg p-6 shadow-sm bg-card">
-      <h3 className="text-xl font-semibold mb-2 text-card-foreground">{title}</h3>
-      <p className="text-muted-foreground mb-4">{description}</p>
-      <div className="flex flex-wrap gap-2">
-        {tags.map((tag) => (
-          <span key={tag} className="text-sm bg-secondary text-secondary-foreground px-2 py-1 rounded">
-            {tag}
-          </span>
-        ))}
+    <div className="bg-white rounded-lg shadow-md overflow-hidden">
+      {project.imageUrl && (
+        <img src={project.imageUrl} alt={project.title} className="w-full h-48 object-cover" />
+      )}
+      <div className="p-4">
+        <h3 className="text-xl font-semibold mb-2">{project.title}</h3>
+        <p className="text-gray-600 text-sm mb-4">{project.description}</p>
+        <div className="flex flex-wrap gap-2 mb-4">
+          {project.technologies.map((tech) => (
+            <span key={tech} className="bg-gray-200 text-gray-800 px-2 py-1 rounded-full text-xs">
+              {tech}
+            </span>
+          ))}
+        </div>
+        <div className="flex justify-between items-center">
+          {project.githubUrl && (
+            <a
+              href={project.githubUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-500 hover:underline text-sm"
+            >
+              GitHub
+            </a>
+          )}
+          {project.liveUrl && (
+            <a
+              href={project.liveUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-500 hover:underline text-sm"
+            >
+              Live Demo
+            </a>
+          )}
+        </div>
       </div>
     </div>
   );
 };
-
-export default ProjectCard;
