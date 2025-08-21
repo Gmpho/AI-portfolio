@@ -2,12 +2,18 @@
 
 import { Pinecone } from '@pinecone-database/pinecone';
 
-const pinecone = new Pinecone({
-  apiKey: process.env.PINECONE_API_KEY!,
-  environment: process.env.PINECONE_ENVIRONMENT!,
-});
+const apiKey = process.env.PINECONE_API_KEY;
+const environment = process.env.PINECONE_ENVIRONMENT;
+const indexName = process.env.PINECONE_INDEX;
 
-const indexName = process.env.PINECONE_INDEX!;
+if (!apiKey || !environment || !indexName) {
+  throw new Error('Pinecone environment variables (PINECONE_API_KEY, PINECONE_ENVIRONMENT, PINECONE_INDEX) are not set.');
+}
+
+const pinecone = new Pinecone({
+  apiKey: apiKey,
+  environment: environment,
+});
 
 export const getPineconeIndex = () => pinecone.Index(indexName);
 
