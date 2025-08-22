@@ -1,24 +1,22 @@
-
-
 import { Pinecone } from '@pinecone-database/pinecone';
+import { PineconeRecord } from '@pinecone-database/pinecone/dist/data/vectors/types';
 
 const apiKey = process.env.PINECONE_API_KEY;
-const environment = process.env.PINECONE_ENVIRONMENT; // Keep for potential future use or logging
 const indexName = process.env.PINECONE_INDEX;
 
-if (!apiKey || !indexName) { // Removed environment from check
-  throw new Error('Pinecone environment variables (PINECONE_API_KEY, PINECONE_INDEX) are not set.');
+if (!apiKey || !indexName) {
+  throw new Error('The PINECONE_API_KEY and PINECONE_INDEX environment variables must be set.');
 }
 
 const pinecone = new Pinecone({
   apiKey: apiKey,
-  // environment: environment, // Removed environment from constructor
 });
 
-export const getPineconeIndex = () => pinecone.Index(indexName);
+const index = pinecone.Index(indexName);
 
-export const upsertVectors = async (vectors: any[]) => {
-  const index = getPineconeIndex();
+export const getPineconeIndex = () => index;
+
+export const upsertVectors = async (vectors: PineconeRecord[]) => {
   try {
     await index.upsert(vectors);
     console.log(`Successfully upserted ${vectors.length} vectors to Pinecone.`);
@@ -28,13 +26,12 @@ export const upsertVectors = async (vectors: any[]) => {
   }
 };
 
-export const queryVectors = async (vector: number[], topK: number = 5, includeMetadata: boolean = true) => {
-  const index = getPineconeIndex();
+export const queryVectors = async (vector: number[], topK: number = 5) => {
   try {
     const queryResponse = await index.query({
-      vector: vector,
-      topK: topK,
-      includeMetadata: includeMetadata,
+      vector,
+      topK,
+      includeMetadata: true,
     });
     return queryResponse.matches;
   } catch (error) {

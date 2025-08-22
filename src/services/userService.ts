@@ -38,7 +38,7 @@ export const generateCareerRecommendations = async (profile: UserProfile): Promi
   Skills: ${profile.skills.join(', ')}
   Experience Level: ${profile.experienceLevel}
   Job Preferences: ${JSON.stringify(profile.jobPreferences)}
-  Conversation History Snippet: ${profile.conversationHistory.slice(-5).map(msg => `${msg.role}: ${msg.content}`).join('\n')}
+  Conversation History Snippet: ${profile.conversationHistory.slice(-5).map((msg: ChatMessage) => `${msg.role}: ${msg.content}`).join('\n')}
 
   Recommendations:`
 

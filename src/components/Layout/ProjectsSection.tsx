@@ -1,6 +1,6 @@
 import React from 'react';
 import { ProjectCard } from '../ProjectCard';
-import { Project } from '@/types'; // Import Project type
+import { Project } from '@/types/project.d'; // Import Project type
 
 const projects: Project[] = [
   {

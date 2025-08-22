@@ -60,7 +60,35 @@ npm install lucide-react clsx @radix-ui/react-popover
 npm install -D eslint prettier @typescript-eslint/eslint-plugin @typescript-eslint/parser
 npm install -D wrangler # Cloudflare Pages deploy helper
 
+npx @modelcontextprotocol/inspector and npm install @modelcontextprotocol/sdk are related tools within the Model Context Protocol (MCP) ecosystem, but they serve different purposes.
+npm install @modelcontextprotocol/sdk
+This command installs the Model Context Protocol Software Development Kit (SDK) as a dependency in your Node.js project. The SDK provides the necessary libraries and tools to:
+Build MCP Servers:
+Create applications that expose resources, prompts, and tools to be consumed by Large Language Models (LLMs) or other MCP clients.
+Build MCP Clients:
+Develop applications that can connect to MCP servers and utilize the exposed functionalities.
+Handle MCP Protocol Messages:
+Manage the communication and lifecycle events defined by the MCP specification.
+npx @modelcontextprotocol/inspector
+This command runs the MCP Inspector, which is a visual debugging and testing tool for MCP servers. npx allows you to execute a package directly from the npm registry without needing to install it globally or locally in your project. The Inspector enables you to:
+Visually Inspect MCP Server Functionality: See how your MCP server is exposing resources, prompts, and tools.
+Test Tools Interactively: Execute the tools exposed by your server and observe their output, aiding in debugging and development before integrating with an LLM application.
+Export Server Configurations: Generate configurations (e.g., mcp.json) for use in clients like Cursor or Claude Code.
+Relationship and Usage
+You would typically use npm install @modelcontextprotocol/sdk first to set up your project and develop your MCP server or client. Once your MCP server is built, you can then use npx @modelcontextprotocol/inspector to launch the Inspector and visually test and debug your server's functionality without needing to integrate it into a full LLM application immediately.
+For example, after building an MCP server using the SDK, you might run:
+Code
+
+npx @modelcontextprotocol/inspector node build/index.js
+This command starts the Inspector and points it to your compiled MCP server, allowing you to interact with and test its exposed capabilities through a web-based interface.
+
 2. Project Structure (Next.js + TypeScript)
+
+npx @modelcontextprotocol/inspector is a command-line tool used to run the Model Context Protocol (MCP) Inspector. The MCP Inspector is a developer tool designed for visually testing and debugging MCP servers. It provides a web-based user interface to interact with your MCP server, inspect its resources, prompts, and tools, and monitor its behavior. 
+npm install @modelcontextprotocol/sdk installs the official TypeScript SDK for the Model Context Protocol. This SDK provides the necessary libraries and types to build both MCP clients and MCP servers in TypeScript. It handles the complexities of the MCP specification, allowing developers to focus on defining their context and interactions.
+Yes, you can use @modelcontextprotocol/sdk to build web applications with Next.js and TypeScript that interact with MCP servers. The SDK facilitates the creation of MCP clients within your Next.js application, enabling it to connect to and consume context from MCP servers. This allows your web app to leverage the capabilities exposed by MCP servers, such as tools for interacting with external services or resources like databases and APIs.
+In essence, the @modelcontextprotocol/sdk empowers your Next.js application to become an MCP client, while npx @modelcontextprotocol/inspector provides a crucial debugging and testing environment for the MCP servers that your application might interact with.
+
 
 3. Core Configuration
 

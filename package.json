@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --turbo",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
@@ -13,9 +13,12 @@
     "test:coverage": "jest --coverage",
     "setup:ai": "node scripts/setup-ai.js",
     "test:ai": "node scripts/test-ai-services.js",
-    "deploy-check": "node scripts/deploy-check.js"
+    "deploy-check": "node scripts/deploy-check.js",
+    "pages:build": "npx @cloudflare/next-on-pages",
+    "pages:deploy": "npm run pages:build && wrangler pages deploy .vercel/output/static"
   },
   "dependencies": {
+    "@cloudflare/next-on-pages": "^1.13.14",
     "@langchain/core": "^0.3.72",
     "@notionhq/client": "^4.0.2",
     "@pinecone-database/pinecone": "^6.1.2",
