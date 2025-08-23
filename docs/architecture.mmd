@@ -1,0 +1,51 @@
+```mermaid
+flowchart TD
+	subgraph FE[Frontend]
+		A[Next.js App Router]\n(Hydrated Client UI)
+		ChatUI[Chat UI Components]\n(Actions/Fetch to /api/chat)
+	end
+
+	subgraph API[Server / API]
+		APIRoute[/api/chat]\n(Server Actions / Edge Functions)
+		LangChainSvc[LangChain Orchestrator]\n{/* tool wiring */}
+	end
+
+	subgraph LLMs[LLMs]
+		OpenAI[(OpenAI GPT-4 / GPT-5)]
+		Ollama[(Ollama / llama.cpp - Local Fallback)]
+	end
+
+	subgraph Data[Datastores]
+		Pinecone[(Pinecone Vector DB)]
+		Notion[(Notion CMS / Projects)]
+	end
+
+	subgraph Infra[Infra & Observability]
+		Sentry[Sentry]
+		CF[Cloudflare Pages / Workers]
+	end
+
+	A --> ChatUI
+	ChatUI --> APIRoute
+	APIRoute --> LangChainSvc
+	LangChainSvc -->|RAG: embeddings / query| Pinecone
+	LangChainSvc -->|Fetch content| Notion
+	LangChainSvc --> OpenAI
+	LangChainSvc -->|fallback| Ollama
+
+	OpenAI -->|embeddings / chat| Pinecone
+	Pinecone -->|matches| LangChainSvc
+
+	APIRoute --> Sentry
+	APIRoute --> CF
+
+	classDef infra fill:#f3f4f6,stroke:#e5e7eb
+	class Infra,Sentry,CF infra
+
+	%% Notes
+	click OpenAI "" "Primary LLM (server-only API key: OPENAI_API_KEY)"
+	click Ollama "" "Local fallback (OLLAMA_BASE_URL)"
+
+	%% Legend
+	classDef datastore fill:#ecfeff,stroke:#cffafe
+	class Pinecone,Notion datastore
