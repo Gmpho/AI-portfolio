@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>AI-portfolio — Demo Visualization</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 24px; }
+      header { margin-bottom: 16px; }
+      .grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
+      .image-card { border: 1px solid #e5e7eb; padding: 12px; border-radius: 8px; }
+      .image-card img { width: 100%; height: auto; display: block; border-radius: 6px; }
+      .caption { margin-top: 8px; color: #374151; font-size: 14px; }
+      .analysis { margin-top: 18px; background: #f8fafc; border: 1px solid #e6edf3; padding: 12px; border-radius: 8px; }
+      .two-col { display: grid; grid-template-columns: 1fr 380px; gap: 18px; align-items: start; }
+      pre { background: #0f172a; color: #e6eef8; padding: 10px; border-radius: 6px; overflow:auto; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>AI-portfolio — Demo Visualization</h1>
+      <p>Local viewer for the project's demo diagrams. Open this file in your browser to inspect the images and notes below.</p>
+    </header>
+
+    <section class="two-col">
+      <div>
+        <div class="grid">
+          <div class="image-card">
+            <img src="../DemoVisual.png" alt="DemoVisual" />
+            <div class="caption"><strong>DemoVisual.png</strong> — general demo / UI overview (open locally to inspect).</div>
+          </div>
+
+          <div class="image-card">
+            <img src="../AI Web App Technology Flowchart.png" alt="AI Web App Technology Flowchart" />
+            <div class="caption"><strong>AI Web App Technology Flowchart.png</strong> — system architecture and technology stack.</div>
+          </div>
+
+          <div class="image-card">
+            <img src="../Gemma + llama.cpp + your Next.js API routes flowchart.png" alt="Gemma + llama.cpp + Next.js API routes" />
+            <div class="caption"><strong>Gemma + llama.cpp + your Next.js API routes flowchart.png</strong> — local/offline LLM fallback and API route wiring.</div>
+          </div>
+
+          <div class="image-card">
+            <img src="../mermaid_diagram_portfolio.png" alt="mermaid_diagram_portfolio" />
+            <div class="caption"><strong>mermaid_diagram_portfolio.png</strong> — exported mermaid flow (if available, source would help regenerate).</div>
+          </div>
+        </div>
+      </div>
+
+      <aside class="analysis">
+        <h3>Quick analysis (auto-generated)</h3>
+        <ul>
+          <li>Images are embedded from the repo root. Open this file with your browser to view them.</li>
+          <li>If images look cropped or low-res, check the original PNGs in the repo root and open them directly in an image viewer.</li>
+        </ul>
+
+        <h4>Inferred system flow</h4>
+        <ol>
+          <li>Front-end (Next.js) ⇄ Client chat UI components send requests to server API routes (e.g., <code>/api/chat</code>).</li>
+          <li>Server uses primary LLM (OpenAI) with fallback to Ollama / local llama.cpp via HTTP (local or container) for offline capability.</li>
+          <li>Vector store (Pinecone) is used for retrieval-augmented generation; Notion is used as a project/CMS source.</li>
+          <li>LangChain orchestrates multi-step agent flows and tools to fetch documents, call embeddings, and run actions.</li>
+          <li>Observability and safety layers include Sentry, content moderation, and a circuit-breaker for LLM calls.</li>
+        </ol>
+
+        <h4>Suggested immediate checks</h4>
+        <ul>
+          <li>Verify sensitive env vars are server-only (no <code>NEXT_PUBLIC_*</code> for secrets).</li>
+          <li>Confirm offline LLM endpoints (Ollama/llama.cpp) are reachable from the API host if enabled.</li>
+          <li>Check Pinecone index configuration and region to ensure low latency from your deploy target.</li>
+          <li>Run a local dev server and exercise the chat UI to confirm API wiring and fallback behavior.</li>
+        </ul>
+
+        <h4>How I can help next</h4>
+        <ol>
+          <li>Annotate the diagrams: if you provide the SVG/Mermaid source or let me generate an inferred mermaid file, I can add captions and overlays.</li>
+          <li>Create a small interactive HTML mock of the chat flow (front-end + mock API) for demo purposes.</li>
+          <li>Extract and convert diagram images to an annotated markdown document for README inclusion.</li>
+        </ol>
+
+        <h4>Open locally</h4>
+        <p>From the repo root, run one of these in PowerShell to open the viewer in your default browser:</p>
+        <pre>Start-Process .\docs\demo-visualization.html
+# or open an image directly
+Start-Process .\DemoVisual.png</pre>
+      </aside>
+    </section>
+  </body>
+</html>
