@@ -7,6 +7,7 @@ const HeroSection = () => {
         <h1 className="text-5xl font-bold">AI-Powered Portfolio</h1>
         <p className="mt-4 text-lg text-muted-foreground">
           Explore my projects and ask questions about them using the AI chatbot.
+          you can ask about the project details, technologies used, and more.
         </p>
       </div>
     </section>
