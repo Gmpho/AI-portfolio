@@ -4,7 +4,7 @@ This document describes the automated Continuous Integration and Continuous Depl
 
 ## Pipeline Overview
 
-The CI/CD pipeline is triggered automatically on every commit to the `main` branch. It orchestrates a series of steps including linting, unit testing, building the application, uploading assets, and deploying to Cloudflare Workers/Pages.
+The CI/CD pipeline is triggered automatically on every commit to the `main` branch. It orchestrates a series of steps including linting, unit testing, security scanning, building the application, uploading assets, and deploying to Cloudflare Workers/Pages.
 
 While Cloudflare's own Workers Builds could be used, we opt for GitHub Actions to provide greater flexibility and control over the build and deployment process.
 
@@ -23,18 +23,22 @@ A typical workflow within our CI/CD pipeline includes the following jobs and ste
     *   Executes all unit tests to verify the correctness of individual components and functions.
     *   Generates and reports code coverage metrics.
 
-4.  **Build App & Source Maps:**
+4.  **Security Scan (Snyk):**
+    *   Runs `snyk monitor` to check for vulnerabilities in dependencies and source code.
+    *   This step is configured to fail the build if new vulnerabilities are found that meet the defined severity threshold.
+
+5.  **Build App & Source Maps:**
     *   Compiles the Next.js application for production.
     *   Generates source maps. For Cloudflare Workers, `upload_source_maps = true` is set in `wrangler.toml` to enable source map uploading for better debugging.
 
-5.  **Upload Source Maps to Sentry:**
+6.  **Upload Source Maps to Sentry:**
     *   Utilizes the Sentry CLI or a dedicated GitHub Action to upload the generated source maps to Sentry, ensuring readable stack traces for error monitoring.
 
-6.  **Wrangler Deploy to Cloudflare:**
+7.  **Wrangler Deploy to Cloudflare:**
     *   Uses the official Cloudflare Wrangler Action to deploy the application to Cloudflare Pages/Workers.
     *   API tokens and account IDs (e.g., `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`) are securely configured as GitHub Secrets and are never exposed in code.
 
-7.  **Post-Deploy Health Check:**
+8.  **Post-Deploy Health Check:**
     *   After deployment, a step pings a health-check endpoint (e.g., `/api/health`) to verify that the application is responding correctly.
     *   Failures at this stage will abort the pipeline and trigger alerts.
 
@@ -45,7 +49,8 @@ graph LR
     A[Code Pushed] --> B[GitHub Actions CI]
     B --> C[Lint & Static Analysis]
     C --> D[Run Unit Tests]
-    D --> E[Build App & Source Maps]
+    D --> S[Security Scan (Snyk)]
+    S --> E[Build App & Source Maps]
     E --> F[Upload Source Maps to Sentry]
     F --> G[Wrangler Deploy to Cloudflare]
     G --> H[Post-Deploy Health Check]
@@ -82,7 +87,19 @@ on:
     branches: [main]
 
 jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Snyk to check for vulnerabilities
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          command: monitor
+
   deploy:
+    needs: security
     runs-on: ubuntu-latest
     permissions:
       contents: read
