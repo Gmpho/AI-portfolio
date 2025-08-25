@@ -1,8 +1,8 @@
-# Testing Strategy
+# 🧪 Testing Strategy
 
 This document outlines the testing strategy and coverage goals for the AI-Powered Portfolio application. Our approach emphasizes a multi-faceted testing methodology to ensure reliability, performance, and security across all layers of the application.
 
-## Testing Types and Goals
+## 🎯 Testing Types and Goals
 
 ### Unit Testing
 
@@ -33,7 +33,7 @@ This document outlines the testing strategy and coverage goals for the AI-Powere
     *   **Security Tests:** Involve attempting known attack payloads to identify vulnerabilities.
     *   **Synthetic Monitoring:** Scheduled E2E checks in production environments to proactively detect issues.
 
-## Resilience Testing
+## 🛡️ Resilience Testing
 
 We perform fault-injection tests to exercise circuit-breakers and retry mechanisms, ensuring the application remains robust under adverse conditions.
 
@@ -41,26 +41,26 @@ We perform fault-injection tests to exercise circuit-breakers and retry mechanis
     *   **Simulate OpenAI outage:** Make route handler return 500 to assert that fallback to Ollama is used and the response is valid.
     *   **Circuit-breaker tests:** Flood API with failures to assert that the circuit opens and closes properly.
 
-## Coverage and Automation
+## 📊 Coverage and Automation
 
 *   **Automation:** All tests are automated and integrated into the CI/CD pipeline.
 *   **Coverage Thresholds:** Enforce code coverage thresholds to maintain code quality.
 *   **Execution Frequency:** Unit tests run on every push. Integration and E2E tests run nightly and on release branches.
 *   **Reporting:** Test results, including failed tests and coverage reports, are published to a team dashboard for visibility.
 
-## Test Data Management
+## 📦 Test Data Management
 
 *   **Representative Data:** Use representative datasets or synthetic data for testing, especially for vector search and prompt responses.
 *   **Isolation:** Isolate test databases from production environments to prevent data corruption.
 *   **Ephemeral Databases:** Utilize Docker or in-memory databases for CI environments to ensure clean and consistent test runs.
 
-## Monitoring in Tests
+## 📈 Monitoring in Tests
 
 *   **Pipeline Health:** Track synthetic monitoring results and overall pipeline health (e.g., via health-check endpoints) to receive alerts on failures automatically.
 
 These testing practices align with recommended industry standards, emphasizing mock dependencies for unit tests, integration tests across components, and comprehensive E2E flows, including chaos/circuit-breaker tests for validating fault tolerance.
 
-## Development Workflow - Testing Commands
+## 💻 Development Workflow - Testing Commands
 
 Here are the common commands for running tests during development:
 
@@ -81,7 +81,7 @@ Here are the common commands for running tests during development:
     npm run test:ai
     ```
 
-## Troubleshooting Guide
+## 🛠️ Troubleshooting Guide
 
 This section provides solutions for common issues encountered during development and testing.
 
@@ -94,7 +94,7 @@ This section provides solutions for common issues encountered during development
 *   **Ollama Connection Problems:**
     *   **Solution:** Make sure your Ollama instance is running and accessible at `http://localhost:11434` (or the configured `OLLAMA_BASE_URL`).
 
-## Environment Setup Verification
+## ✅ Environment Setup Verification
 
 To ensure your development environment is correctly configured, use the following commands:
 

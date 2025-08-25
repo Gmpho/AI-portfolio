@@ -1,8 +1,8 @@
-# Security Practices
+# 🛡️ Security Practices
 
 This document outlines the security controls, secret handling mechanisms, and compliance mapping implemented within the AI-Powered Portfolio project. Our approach focuses on shifting security left, automating checks, and adhering to industry best practices.
 
-## DevSecOps Practices
+## 🚀 DevSecOps Practices
 
 We integrate security into every stage of the development lifecycle through automated scans and continuous integration practices:
 
@@ -11,7 +11,7 @@ We integrate security into every stage of the development lifecycle through auto
 *   **GitHub Secret Scanning:** Regular GitHub secret scanning is enabled to detect any accidental exposure of secrets.
 *   **OWASP DevSecOps Guidelines:** Our practices align with OWASP DevSecOps guidelines, emphasizing pre-commit and CI scans to ensure secrets never enter the repository.
 
-## Secrets Management
+## 🔑 Secrets Management
 
 Secure handling of API keys and sensitive tokens is paramount. We employ a multi-layered approach:
 
@@ -19,14 +19,14 @@ Secure handling of API keys and sensitive tokens is paramount. We employ a multi
 *   **Cloudflare Workers Secrets:** Values used by Cloudflare Workers are managed via Cloudflare's Secrets store (using `wrangler secrets`).
 *   **Local Development:** For local development, `.env` or `.dev.vars` files are used to store secrets. These files are explicitly gitignored to prevent them from being committed to version control.
 
-## Observability
+## 📊 Observability
 
 Robust observability is crucial for detecting and responding to security incidents and operational issues:
 
 *   **Sentry Integration:** We integrate Sentry for comprehensive error monitoring. The build pipeline uploads source maps (configured via `upload_source_maps = true` in `wrangler.toml`) to enable de-minified stack traces.
 *   **Unhandled Exceptions:** All unhandled exceptions in both Workers and frontend code are captured by Sentry, providing immediate alerts and context for investigations.
 
-## OWASP Top 10 Adherence
+## 🏆 OWASP Top 10 Adherence
 
 Our code is reviewed against the OWASP Top 10 risks to mitigate common web application vulnerabilities:
 
@@ -36,7 +36,7 @@ Our code is reviewed against the OWASP Top 10 risks to mitigate common web appli
 *   **A7: Cross-Site Scripting (XSS):** Mitigated by implementing a Content Security Policy (CSP) and sanitizing all rendered HTML and user-generated content.
 *   **A8: Cross-Site Request Forgery (CSRF):** Addressed by using CSRF tokens for stateful endpoints or enforcing same-site cookie policies.
 
-## Compliance Mapping (SOC 2 & GDPR)
+## 📜 Compliance Mapping (SOC 2 & GDPR)
 
 We map our security controls to relevant compliance standards:
 

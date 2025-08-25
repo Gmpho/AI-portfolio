@@ -45,18 +45,26 @@ A typical workflow within our CI/CD pipeline includes the following jobs and ste
 ## CI/CD Flowchart
 
 ```mermaid
-graph LR
-    A[Code Pushed] --> B[GitHub Actions CI]
-    B --> C[Lint & Static Analysis]
-    C --> D[Run Unit Tests]
-    D --> S[Security Scan (Snyk)]
-    S --> E[Build App & Source Maps]
-    E --> F[Upload Source Maps to Sentry]
-    F --> G[Wrangler Deploy to Cloudflare]
-    G --> H[Post-Deploy Health Check]
-    H --> I{Success?}
-    I -- No --> J[Alert/Metrics]
-    I -- Yes --> K[Done]
+graph TD
+    subgraph "CI: Continuous Integration"
+        A[🚀 Code Pushed] --> B{GitHub Actions CI};
+        B --> C[🧹 Lint & Static Analysis];
+        C --> D[🧪 Run Unit Tests];
+        D --> S[🛡️ Security Scan (Snyk)];
+    end
+
+    subgraph "CD: Continuous Deployment"
+        S --> E[📦 Build App & Source Maps];
+        E --> F[📤 Upload Source Maps to Sentry];
+        F --> G[☁️ Wrangler Deploy to Cloudflare];
+        G --> H[🩺 Post-Deploy Health Check];
+    end
+
+    subgraph "Post-Deployment"
+        H --> I{✅ Success?};
+        I -- No --> J[🚨 Alert/Metrics];
+        I -- Yes --> K[🎉 Done];
+    end
 ```
 
 ## CI/CD Best Practices

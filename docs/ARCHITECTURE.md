@@ -1,12 +1,12 @@
-# Architecture Overview
+# 🏗️ Architecture Overview
 
 This document details the system design, key components, and deployment strategy of the AI-Powered Portfolio application. It emphasizes a modular approach and leverages modern cloud-native services for scalability and performance.
 
-## Core Architecture
+## 🏛️ Core Architecture
 
 The application's core architecture is designed for high availability and low latency, utilizing Cloudflare's global edge network for deployment. User requests are routed through Cloudflare Pages/Workers, with backend logic (AI/chat handlers) running on Cloudflare Workers or Edge Functions.
 
-### Visual Representation
+### 📊 Visual Representation
 
 Below is a high-level diagram illustrating the traffic flow and service interactions within the application. For a more detailed visual, refer to the `AI Web App Technology Flowchart.png` in the project root.
 
@@ -35,7 +35,7 @@ graph LR
 
 *Figure: Example full-stack architecture on Cloudflare*
 
-## Component Interaction
+## 🧩 Component Interaction
 
 Next.js API routes (located in `app/api/`) serve as the primary interface for external services. For instance, the `/api/chat` handler orchestrates interactions with various AI and data services:
 
@@ -43,7 +43,7 @@ Next.js API routes (located in `app/api/`) serve as the primary interface for ex
 *   Stores and retrieves vectors from Pinecone for knowledge retrieval.
 *   Reads and writes data in Notion for content management.
 
-## Groups and Services
+## 📦 Groups and Services
 
 The architecture is logically grouped to illustrate hierarchies and service boundaries:
 
@@ -51,7 +51,7 @@ The architecture is logically grouped to illustrate hierarchies and service boun
 *   **Next.js Application:** Deployed as a Cloudflare Pages/Workers application, it serves the frontend and acts as a proxy/orchestrator for backend API calls.
 *   **Backend Services:** These include external AI providers (OpenAI, Ollama), the Pinecone vector database, and the Notion API, all accessed securely from the Next.js API routes.
 
-## Deployment Strategy
+## 🚀 Deployment Strategy
 
 Our deployment strategy is fully serverless, leveraging GitHub Actions for CI/CD and Cloudflare Pages/Workers for hosting:
 
@@ -62,7 +62,7 @@ Our deployment strategy is fully serverless, leveraging GitHub Actions for CI/CD
 
 This setup ensures a robust, scalable, and secure deployment pipeline.
 
-## Runtime & Infrastructure Decisions
+## ⚙️ Runtime & Infrastructure Decisions
 
 ### Next.js App Router
 
@@ -84,7 +84,7 @@ This setup ensures a robust, scalable, and secure deployment pipeline.
 *   **Automated Pipeline:** Manages the build, test, and deploy pipeline, with secrets securely stored in GitHub Secrets.
 *   **Source Map Uploads:** Configured to upload source maps to Sentry during CI builds for improved debugging.
 
-## Local LLM Strategy: Ollama + Gemma-3-270M
+## 🤖 Local LLM Strategy: Ollama + Gemma-3-270M
 
 For local development and as a robust offline fallback, we utilize Ollama with the Gemma-3-270M model. This strategy is optimized for resource-constrained hardware (e.g., 8GB RAM machines).
 
@@ -119,7 +119,7 @@ For local development and as a robust offline fallback, we utilize Ollama with t
 *   **Repetition Penalty:** `1.0`
 *   **Max Tokens per Call:** `256–512` (to avoid long free-form generations on low memory).
 
-## Secure API Design
+## 🛡️ Secure API Design
 
 Our API design incorporates robust security measures:
 
@@ -138,7 +138,7 @@ Our API design incorporates robust security measures:
 *   **Rate Limits:** Implement per-IP and per-user token rate limits (e.g., 60 requests/min per IP for chat, 10 requests/min per user for expensive endpoints).
 *   **DDoS Mitigation:** Enable Cloudflare rate limiting and challenge pages for suspicious traffic.
 
-## Complete Folder Structure 📁
+## 📁 Complete Folder Structure
 
 ```
 AI-portfolio/ 🚀

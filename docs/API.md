@@ -1,8 +1,8 @@
-# API Documentation
+# 🔌 API Documentation
 
 This document provides detailed documentation for each Next.js API endpoint (backend route handler) within the AI-Powered Portfolio application. It covers request/response schemas, authentication mechanisms, and usage examples.
 
-## API Gateway & Proxy Architecture
+## 🛡️ API Gateway & Proxy Architecture
 
 Our API design incorporates robust security measures and a layered architecture to protect backend services and ensure secure communication. All API calls are routed through Cloudflare's edge network, acting as an API Gateway and proxy.
 
@@ -11,7 +11,7 @@ Our API design incorporates robust security measures and a layered architecture 
 
 For more comprehensive details on API hardening rules, refer to the [Security Practices](SECURITY.md) documentation.
 
-## Endpoint Reference
+## 📚 Endpoint Reference
 
 For each API route, the following details are provided:
 
@@ -154,7 +154,7 @@ For each API route, the following details are provided:
     ```
 *   **Status Codes:** `200 OK` (if services are healthy), `503 Service Unavailable` (if any critical service is unhealthy).
 
-## Auth & Error Codes
+## 🔐 Auth & Error Codes
 
 *   **Authentication:** Currently, the `/api/chat` route implements basic IP-based rate limiting. Future implementations may include JWT-based authentication for user-specific features. Admin-only endpoints like `/api/pinecone/upsert` require robust authentication.
 *   **Error Handling:** API endpoints return standard HTTP status codes and JSON payloads for errors. For example:
@@ -162,21 +162,21 @@ For each API route, the following details are provided:
     *   `429 Too Many Requests`: If rate limits are exceeded.
     *   `500 Internal Server Error`: For unhandled exceptions or issues with backend services.
 
-## Data Modeling
+## 📦 Data Modeling
 
 For endpoints interacting with Pinecone or Notion, data is structured as follows:
 
 *   **Pinecone:** Vectors are stored with associated metadata (e.g., `text` field for content, `source` for origin).
 *   **Notion:** Project data is structured according to the Notion database schema, typically including fields like `Name` (title), `Description`, `Technologies`, `Category`, `Status`, `GitHub URL`, `Live URL`, and `Image URL`.
 
-## Interactive Documentation
+##  interactive Docs
 
 For more detailed and interactive API documentation, consider generating OpenAPI (Swagger) schemas. Alternatively, Markdown tables can be used to present endpoint details, parameters, request/response examples, authentication methods, and error handling in a structured way.
 
-## Next.js Routing
+## 🗺️ Next.js Routing
 
 Next.js automatically maps files within the `app/api/` directory to API routes. For example, `app/api/chat/route.ts` becomes the `/api/chat` endpoint.
 
-## Usage Limits
+## 📈 Usage Limits
 
 Clients interacting with the API should be aware of potential usage quotas and rate limits imposed by integrated services (e.g., OpenAI API rate limits, Pinecone query limits, Ollama local instance capacity). Implement client-side retry mechanisms with exponential backoff for transient errors.

@@ -1,21 +1,25 @@
-# AI-Powered Portfolio
+# 🚀 AI-Powered Portfolio
 
-## Project Overview
+## 📝 Project Overview
 
 This project is an AI-powered portfolio website featuring a self-learning career coach chatbot. It's designed to showcase projects while providing personalized career guidance through intelligent conversations that adapt and learn from each interaction.
 
-## Key Features
+## ✨ Key Features
 
-*   AI-powered career coach chatbot
-*   Self-learning capabilities
-*   Dynamic project showcase
-*   Integration with OpenAI, Ollama, Pinecone, and Notion
-*   Modern UI with ShadCN UI components
-*   LangChain Agent Executor for AI orchestration
-*   Robust DevSecOps & Observability (Sentry, Guardrails, Feature Flags)
-*   CI/CD with GitHub Actions and Cloudflare Pages
+*   🤖 AI-powered career coach chatbot
+*   🧠 Self-learning capabilities
+*   🎨 Dynamic project showcase
+*   🔌 Integration with OpenAI, Ollama, Pinecone, and Notion
+*   💻 Modern UI with ShadCN UI components
+*   🔗 LangChain Agent Executor for AI orchestration
+*   🛡️ Robust DevSecOps & Observability (Sentry, Guardrails, Feature Flags)
+*   🔄 CI/CD with GitHub Actions and Cloudflare Pages
 
-## Technical Stack
+## 🖼️ Visual Demo
+
+![AI-Powered Portfolio Demo](DemoVisual.png)
+
+## 🛠️ Technical Stack
 
 Our application is built with a modern and robust technology stack:
 
@@ -44,7 +48,7 @@ Our application is built with a modern and robust technology stack:
 *   **Formatting:** Prettier
 *   **Testing:** Jest + React Testing Library
 
-## Quick Start & Setup
+## ⚙️ Quick Start & Setup
 
 Follow these steps to get the project running locally:
 
@@ -86,7 +90,7 @@ Follow these steps to get the project running locally:
     ```
     This will start the Next.js development server, typically accessible at `http://localhost:3000`.
 
-## Usage
+## 🚀 Usage
 
 Once the development server is running, you can interact with the application:
 
@@ -94,18 +98,18 @@ Once the development server is running, you can interact with the application:
 *   **Chatbot:** Interact with the AI-powered career coach chatbot through the provided UI.
 *   **API Endpoints:** (For developers) You can test API routes directly. For example, sending a POST request to `/api/chat` with a message payload.
 
-## Contributing
+## 🤝 Contributing
 
 We welcome contributions to this project! Please refer to our `CONTRIBUTING.md` guide (to be created) for details on how to submit issues, propose features, and contribute code. We adhere to strict code style checks (linting, formatting) and encourage pull requests.
 
-## Links to Further Documentation
+## 📚 Links to Further Documentation
 
-*   [Architecture Overview](ARCHITECTURE.md)
-*   [LangChain Agents Details](LANGCHAIN_AGENTS.md)
-*   [Security Practices](SECURITY.md)
-*   [API Documentation](API.md)
-*   [Testing Strategy](TESTING.md)
-*   [CI/CD Pipeline](CI_CD.md)
+*   [Architecture Overview](docs/ARCHITECTURE.md)
+*   [LangChain Agents Details](docs/LANGCHAIN_AGENTS.md)
+*   [Security Practices](docs/SECURITY.md)
+*   [API Documentation](docs/API.md)
+*   [Testing Strategy](docs/TESTING.md)
+*   [CI/CD Pipeline](docs/CI_CD.md)
 
 ---
 

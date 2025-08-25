@@ -1,8 +1,8 @@
-# LangChain Agents
+# 🤖 LangChain Agents
 
 This document details the setup, configuration, and patterns for LangChain agents within the AI-Powered Portfolio's career coach chatbot. It covers the agent architecture, tool registry, and robust error handling strategies.
 
-## Agent Architecture
+## 🧠 Agent Architecture
 
 Our system employs a sophisticated multi-agent architecture based on the LangChain Planner/Executor style. This design allows for complex user tasks to be broken down and processed efficiently.
 
@@ -16,7 +16,7 @@ Our system employs a sophisticated multi-agent architecture based on the LangCha
 
 This multi-agent setup is a known pattern for building intelligent and adaptable AI systems. For a visual representation, refer to the `Gemma + llama.cpp + your Next.js API routes flowchart.png` in the project root, which illustrates a similar multi-agent flow.
 
-## Tool Registry
+## 🛠️ Tool Registry
 
 Agents in our system are equipped with a comprehensive set of tools to perform their tasks. These tools are registered and made available for agents to utilize based on the context of the user's request.
 
@@ -26,14 +26,14 @@ Agents in our system are equipped with a comprehensive set of tools to perform t
 
 Optionally, we can integrate with a Smithery/MCP tool registry, which allows models to dynamically discover and query external tools, enhancing extensibility.
 
-## Fallback Strategies
+## 🔄 Fallback Strategies
 
 To ensure resilience and continuous service availability, our LangChain setup incorporates robust fallback mechanisms, particularly when LLMs or agent chains encounter failures.
 
 *   **OpenAI Fallback:** If the primary OpenAI chat API times out or hits rate limits, the system can automatically retry with a different model or fall back to a local Ollama instance.
 *   **Ollama Integration:** We utilize the `langchain-ollama` provider for local/self-hosted Ollama LLMs. If OpenAI fails, Ollama serves as a fallback. Conversely, if Ollama provides incoherent output, the system can fall back to OpenAI.
 
-## Error Handling Patterns
+## 🚨 Error Handling Patterns
 
 Effective error handling is crucial for a stable and user-friendly chatbot experience. We employ the following patterns:
 
@@ -44,7 +44,7 @@ Effective error handling is crucial for a stable and user-friendly chatbot exper
 
 These patterns collectively reflect LangChain best practices for modular agents, tool registration, and robust fault tolerance.
 
-## Security for Agents
+## 🛡️ Security for Agents
 
 Security is paramount when dealing with AI agents that can interact with external tools and data. Our approach includes:
 
@@ -52,7 +52,7 @@ Security is paramount when dealing with AI agents that can interact with externa
 *   **Scoped Credentials:** Each tool is configured to use credentials with the minimum necessary scope, adhering to the principle of least privilege.
 *   **Auditing and Logging:** All tool calls and agent actions are audited and logged (e.g., to Sentry and a custom audit log) for traceability and security monitoring.
 
-## Example Agent Flow
+## 🗺️ Example Agent Flow
 
 To illustrate how our LangChain agents operate, consider the following user query:
 
