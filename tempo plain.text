@@ -1,0 +1,1704 @@
+GEMINI PLAYBOOK — Project Manifest for AI-portfolio
+
+One canonical doc for Gemini CLI + humans. Use this so Gemini always knows the stack, rules, memory, file-reading behavior, security guardrails, and exactly how to operate on repo docs, images and PDFs.
+
+TL;DR — mission statement
+
+Gemini: you are the trusted dev-sidekick for the Gmpho/AI-portfolio repo. Always follow these rules: no secrets, no auto-commit without review, validate with tests/CI before deploy, use MCP security checks, and prefer local-first inference (llama.cpp) with Ollama/OpenAI fallbacks.
+
+This document contains:
+
+Quick project summary & links
+
+Security rules & production hardening checklist
+
+Operational logic (fallbacks, circuit-breakers, rate limits)
+
+How to read/process repo docs, images, and PDFs (commands & scripts)
+
+Gemini CLI config + memory templates to add to repo
+
+Task list, folder structure, sprint model, architecture (for humans & agents)
+
+1) Project summary (copy this into memory)
+Project: AI-portfolio (https://github.com/Gmpho/AI-portfolio)
+Stack: Next.js 14+ (App Router, TypeScript) + Tailwind + shadcn
+AI: OpenAI (primary), Ollama (local fallback), Gemma-3-270m via llama.cpp (local inference)
+Vector DB: Pinecone
+CMS: Notion
+Agents: LangChain / LangGraph, MCP tool registry for standardized tools
+Runtime: Cloudflare Pages/Workers (OpenNext adapter) + Dockerized model hosts for llama.cpp/Ollama
+CI/CD: GitHub Actions (build, tests, Sentry sourcemaps, deploy)
+Observability: Sentry, Cloudflare metrics
+Security: TLS everywhere, API gateway, per-IP rate limiting, circuit-breakers, feature flags
+
+2) Canonical links (read these; Gemini should cite or use them)
+
+Cloudflare Workers/Wrangler config (containers):
+https://developers.cloudflare.com/workers/wrangler/configuration/#containers
+
+Cloudflare: MCP servers for Cloudflare (Model Context Protocol):
+https://developers.cloudflare.com/agents/model-context-protocol/mcp-servers-for-cloudflare/
+
+Cloudflare guide: Next.js on Workers / web apps:
+https://developers.cloudflare.com/workers/framework-guides/web-apps/nextjs/
+
+llama-cpp-python server docs (OpenAI-compatible server):
+https://llama-cpp-python.readthedocs.io/en/latest/server/
+
+OpenNext (OpenNext Cloudflare adapter): (usage described in Cloudflare docs & OpenNext repos)
+https://opennext.js.org/cloudflare/
+
+Next.js App Router / envs / Turbopack (official):
+https://nextjs.org/docs
+
+Model Context Protocol (MCP) TS SDK: @modelcontextprotocol/typescript-sdk on npm / GitHub (use SDK docs)
+
+Gemini rule: If you propose code referencing external APIs, include an inline link to the authoritative doc above.
+
+3) Security policy (must be enforced ALWAYS)
+
+Non-negotiable runtime rules
+
+HTTPS only — enforce Strict-Transport-Security at edge (Cloudflare).
+
+Secrets: NEVER write secrets to code, logs, or chat. Secrets live only in GitHub Secrets / Cloudflare env; never store them in GEMINI memory.
+
+Auth: All model servers and MCP endpoints require an x-api-key or Authorization header.
+
+Rate-limiting: Per-IP limit at Cloudflare WAF (preferred), plus app-level Durable Object / KV backed sliding window.
+
+Circuit-breaker: Wrap all LLM calls with break/cooldown + exponential backoff. If failures exceed threshold, open circuit and escalate (Sentry alert).
+
+Fallback chain: llama.cpp (local) → Ollama (local/edge) → OpenAI (cloud). Switch only after retries/timeouts.
+
+Validation: Validate all API input with zod / strict schemas server-side before any LLM/tool call.
+
+Sanitization: Sanitize any user content returned to logs or sent to third-party services (PII redaction).
+
+Observability: All errors and failovers must be logged to Sentry with no secrets; include correlation IDs for traces.
+
+Deployment gating: CI must run tests, lint, typecheck, build; post-deploy health check must pass before promotion.
+
+Gemini-specific safety
+
+.gemini/settings.json must set safetyLevel: "BLOCK_HIGH", checkpointing enabled, and disable dangerous tools in CI.
+
+When Gemini suggests code edits that touch secrets, auto-block and require manual approval.
+
+4) Operational logic — how APIs should behave
+
+/api/chat route (edge proxy)
+
+Validate payload (zod).
+
+Rate-limit per IP.
+
+Try local llama.cpp (LLAMA_CPP_BASE_URL) with a short timeout (1.5s) using withRetry(tries=2, base=120) and circuit.
+
+If fails, try Ollama (OLLAMA_BASE_URL) with 2 retries.
+
+If still fails or model returns error, call OpenAI (cloud).
+
+Stream responses to client if supported — forward chunked body.
+
+Log metrics: latency, tokens, which provider responded, response_size, failover_count.
+
+Resume ingestion flow
+
+Client uploads PDF via UI. Browser extracts text if possible via PDF.js; otherwise upload file to /api/resume/upload.
+
+Server extracts text (PDF.js server-side or pdftotext), extracts embeddings (local embedding model or OpenAI embeddings), store vectors in Pinecone.
+
+Index metadata includes source: resume, userId, timestamp.
+
+MCP tool registry
+
+Tools expose standard schemas and are registered with the MCP server. Tools include:
+
+project_search (input: {query:string} → returns project metadata from Pinecone)
+
+notion_latest (list pages from Notion DB)
+
+resume_extract_skills (input {text:string} → returns skills[])
+
+Agents call tools with MCPClient.call("tool_name", args).
+
+5) Gem CLI — project config files (add to repo)
+
+.gemini/settings.json (safe defaults)
+
+{
+  "contextFileName": "GEMINI.md",
+  "safetyLevel": "BLOCK_HIGH",
+  "autoAccept": false,
+  "checkpointing": { "enabled": true },
+  "sandbox": "docker",
+  "excludeTools": ["run_shell_command"],
+  "mcpServers": {
+    "portfolio-mcp": {
+      "command": "node",
+      "args": ["mcp/server.ts"],
+      "cwd": "./",
+      "timeout": 10000,
+      "trust": false
+    }
+  }
+}
+
+
+GEMINI.md (project memory & rules — place in root)
+
+# GEMINI Context — AI Portfolio
+
+Stack: Next.js (OpenNext) + Cloudflare, LangGraph, MCP tools, llama.cpp (gemma-3-270m) + Ollama + OpenAI.
+
+Security rules:
+- TLS/HTTPS always
+- API gateway & per-IP rate limit
+- Fallback chain: LLAMA -> OLLAMA -> OPENAI
+- No secrets; never print credentials
+- Validate all inputs (zod)
+
+Key endpoints:
+- /api/health
+- /api/chat
+- /api/resume/upload
+- MCP server: http://localhost:7777
+
+Memory facts:
+- Prefer gemma-3-270m-it-GGUF for local testing.
+- Use docker compose for local dev: docker-compose.dev.yml
+- Use `mcp/server.ts` as the MCP tool registry when available.
+
+
+Gemini usage tips (human-readable)
+
+To load project files: gemini read_many_files --paths ./docs/**/*.md,./docs/**/*.pdf
+
+To import a single PDF and convert to markdown: gemini read_file --path ./docs/resume.pdf --output ./docs/resume.md
+
+To store a persistent fact: save_memory("LLAMA_CPP_BASE_URL=http://localhost:8000/v1 (dev)")
+
+Always review diffs; accept only after tests run.
+
+Gemini rule: If a code change touches app/api/* or .github/workflows/*, require CI green before merging.
+
+6) How to make Gemini read your images and PDFs (practical steps)
+
+Gemini CLI can read repository files and (depending on CLI features) may be able to parse images/PDFs if you provide the right tools or convert them to text/markdown first.
+
+Preferred approach (reliable & reproducible)
+
+Store files in repo under /docs/ or /public/assets/ (examples: /docs/design.png, /docs/resume.pdf).
+
+Convert PDFs → Markdown or text (so Gemini can reason over textual content). Use a conversion script or CLI program:
+
+Using pandoc (preferred for Markdown output):
+
+# install pandoc (local)
+pandoc docs/resume.pdf -t markdown -o docs/resume.md
+
+
+Or pdftotext (Poppler) for raw text:
+
+pdftotext docs/resume.pdf docs/resume.txt
+
+
+For scanned PDFs/images, run OCR first:
+
+tesseract docs/scan.png docs/scan_txt -l eng
+
+
+Extract images from PDFs (if images contain content you want Gemini to inspect):
+
+pdfimages -all docs/resume.pdf docs/images/resume-img
+
+
+Use OCR on extracted images if needed.
+
+Commit the converted .md or .txt files into repo or place them in ./docs/processed/ and then let Gemini read them:
+
+gemini read_many_files --paths ./docs/processed/*.md
+
+
+If you want inline image analysis, add captions and alt text in Markdown so Gemini uses the textual context:
+
+![System architecture diagram — shows Next.js -> llama.cpp -> MCP -> Pinecone](docs/images/arch.png)
+
+
+Then run:
+
+gemini read_file --path ./docs/ARCHITECTURE.md
+
+
+Automated helper script (recommended)
+Add scripts/convert-pdfs.sh to repo:
+
+#!/usr/bin/env bash
+mkdir -p docs/processed
+for f in docs/*.pdf; do
+  name=$(basename "$f" .pdf)
+  pandoc "$f" -t markdown -o "docs/processed/${name}.md" || pdftotext "$f" "docs/processed/${name}.txt"
+done
+
+
+Use: npm run convert:pdfs (add to package.json).
+
+Direct Gemini commands (if CLI supports file reading)
+
+Read many: gemini read_many_files --paths ./docs/processed/* --output ./tmp/gemini-context.json
+
+Summarize: gemini summarize --source ./docs/processed/resume.md --format bullets
+
+Gemini rule: always add the converted text files to repo or provide a stable URL that Gemini can access. Don’t paste raw PDFs into chat.
+
+7) MCP & LangGraph instructions for Gemini (how to work with tools)
+
+Start MCP server locally
+
+cd mcp && npm ci && node server.ts (or docker compose up mcp)
+
+Register tools (example)
+
+project_search (input { query: string }, output: [projects])
+
+notion_latest (no input, returns pages)
+
+resume_extract_skills (input { text: string }, returns skills[])
+
+Gemini tasks for tools
+
+Use mcp to validate tool schemas before registering.
+
+When asked to change an MCP tool, Gemini must run unit tests (if present) and generate an OpenAPI-like schema for the tool.
+
+8) GitHub Actions + Cloudflare: rules for Gemini edits
+
+Any PR touching .github/workflows/*, wrangler.toml, open-next.config.ts must include:
+
+CI job to npm ci and npm run build:cf
+
+A step that runs curl health check to /api/health
+
+Sentry sourcemap upload step (if code-build includes sourcemaps)
+
+Gemini must create PRs and include in PR description:
+
+Which tests were added/updated
+
+What secrets are required (not the values)
+
+The preview URL (Cloudflare Pages preview)
+
+9) How Gemini should handle code generation & commits (policy)
+
+Always create a PR, never commit directly to main. PR template must include:
+
+Short description, linked issue, test plan, and preview URL.
+
+Run tests locally before generating the patch. If tests are missing, Gemini should add tests for core logic it touches.
+
+No secrets in text: if a secret is required, Gemini must insert a placeholder and add instructions to set GH Secret / CF env var.
+
+Production safety: if change affects runtime behavior (rate-limits, WAF, model endpoints), mark PR with label ops-review and require at least one human approver.
+
+If change touches .gemini/settings.json — require human confirmation.
+
+10) Developer commands & scripts (fast reference)
+# dev
+npm install
+docker compose -f docker-compose.dev.yml up --build
+
+# convert PDFs into repo-friendly markdown
+npm run convert:pdfs
+
+# run local Next.js dev server
+npm run dev
+
+# run unit tests
+npm run test
+
+# build for Cloudflare preview (OpenNext)
+npm run preview:cf
+
+# deploy to Cloudflare Pages (CI will do this in prod)
+npm run deploy:cf
+
+
+Add these to package.json scripts for convenience.
+
+11) Troubleshooting & guardrails (if things go wrong)
+
+If /api/health fails: check model host (docker logs for llama), then check MCP server, then Pinecone/Notion keys.
+
+If chat stalls: check streaming behavior — read logs to see which provider timed out.
+
+Sentry alerts escalate: check recent commits for model endpoint changes or env var rotations.
+
+If preview build fails on Cloudflare: check nodejs_compat flag in wrangler.toml and OpenNext build logs.
+
+12) Final: deliverable checklist for Gemini & humans
+✅ Task list (short)
+
+Add .gemini/settings.json and GEMINI.md (see templates).
+
+Add scripts/convert-pdfs.sh and npm run convert:pdfs. Run and commit processed files.
+
+Add /docs/processed/ and store converted .md files.
+
+Add app/api/health/route.ts and app/api/chat/route.ts (edge proxy + fallback).
+
+Add mcp/server.ts (tool registry) and docker compose for dev.
+
+Wire CI: build, tests, Sentry upload, post-deploy health check.
+
+Document runbook & ops steps in docs/SECURITY.md & docs/OPERATIONS.md.
+
+📂 Suggested folder structure (minimal)
+/app/api/
+  chat/route.ts
+  health/route.ts
+/docs/
+  ARCHITECTURE.md
+  processed/
+    resume.md
+    architecture.md
+  images/
+/mcp/
+  server.ts
+/scripts/
+  convert-pdfs.sh
+/docker/
+  llama/Dockerfile
+docker-compose.dev.yml
+.gemini/settings.json
+GEMINI.md
+README.md
+
+🔁 Sprint model (one-week micro-sprints)
+
+Sprint 0 (0.5d): Add GEMINI configs + .env.example
+
+Sprint 1 (1d): Local docker-compose with llama + mcp + agent
+
+Sprint 2 (1d): Edge /api/chat with fallback + /api/health
+
+Sprint 3 (1d): MCP tool registry + agent wiring (LangGraph)
+
+Sprint 4 (1d): CI/CD, Sentry sourcemap upload, preview deploys
+
+Sprint 5 (1d): Testing, resilience tests, docs polish
+
+🧠 Architecture (one-liner + mermaid)
+
+One-liner: Next.js (OpenNext) runs on Cloudflare Pages/Workers (edge), proxies to secure model hosts (llama.cpp / Ollama) and MCP tool registry; Pinecone & Notion are used for memory and CMS; Sentry + Cloudflare monitor security and uptime.
+
+flowchart TD
+  Browser --> Cloudflare[Cloudflare Pages (OpenNext)]
+  Cloudflare --> EdgeAPI[/app/api/chat/]
+  EdgeAPI -->|proxy| Llama[llama.cpp (container/VM)]
+  EdgeAPI -->|fallback| Ollama[Ollama runtime]
+  EdgeAPI -->|fallback| OpenAI[OpenAI]
+  EdgeAPI --> MCP[MCP tools (Pinecone, Notion)]
+  MCP --> Pinecone[Pinecone Vector DB]
+  MCP --> Notion[Notion API]
+  Observability[Sentry] -. logs .-> EdgeAPI
+  Observability -. logs .-> Llama
+
+Final notes for Gemini (mandatory)
+
+Before editing files: gemini status → load GEMINI.md context → read_many_files on /docs/processed/* → propose diff.
+
+Always produce a PR, include CI test plan, and attach preview URL.
+
+If asked to analyze an image or PDF: request that it be converted with pandoc or tesseract and made available under /docs/processed before deep analysis.
+
+NEVER store secrets in GEMINI.md or memory.
+
+
+
+
+
+
+
+
+
+
+
+
+AI-Portfolio — Canonical Project Rules & Runbook
+1 — One-line mission
+
+Next.js App Router (OpenNext → Cloudflare Pages/Workers) front-end; local inference via llama.cpp (GGUF) or Ollama hosted in containers/VM; LangChain/LangGraph agents orchestrating via an MCP tool registry; secure, observable, and self-healing.
+
+2 — Guaranteed source of truth (files you must maintain)
+
+docs/GEMINI_PROJECT.md (this file)
+
+.gemini/settings.json (Gemini CLI safety + MCP integration)
+
+GEMINI.md (project memory / policy rules for the CLI)
+
+wrangler.toml / open-next.config.ts (Cloudflare + OpenNext config)
+
+docker-compose.dev.yml (local model + MCP + agent)
+
+app/api/chat/route.ts and app/api/health/route.ts (edge proxies)
+
+mcp/server.ts (MCP tool registry)
+
+.env.example (secrets template, no values)
+
+docs/ARCHITECTURE.md, docs/SECURITY.md, docs/CI_CD.md
+
+3 — High-level architecture (short)
+
+Browser → Next.js (Cloudflare Pages via OpenNext) → edge API route /api/chat.
+
+/api/chat proxies to internal model endpoints in prioritized order: local llama.cpp (container) → Ollama local (container) → OpenAI cloud.
+
+LangChain/LangGraph Agents use an MCP tool registry (server) to call project/search/resume extraction tools (Pinecone, Notion).
+
+Observability: Sentry + Cloudflare metrics + logs. CI: GitHub Actions builds + deploys.
+(Full diagram lives in docs/ARCHITECTURE.md.)
+
+Citations for deployment architecture and adapters: OpenNext + Cloudflare adapter docs and Wrangler configuration. 
+opennext.js.org
+Cloudflare Docs
+
+4 — Security rules (non-negotiable)
+
+Transport: TLS everywhere (Cloudflare terminating TLS, always https).
+
+Perimeter: Cloudflare API Gateway / WAF protects /api/* endpoints; enable rate limiting and challenge pages for suspicious traffic.
+
+Auth: Agent/Model endpoints require service tokens (x-api-key or Bearer); rotate via CI job.
+
+Secrets: Only in GitHub Secrets and Cloudflare environment variables; never in code or Gemini memory. Add do_not_store_secrets_in_memory to GEMINI.md.
+
+Input sanitation & anti-prompt-injection: Validate all inbound messages with zod or equivalent; sanitize text before sending to any LLM.
+
+Circuit breakers & fallback: Wrap every LLM call with retry/backoff and a circuit-breaker. Failover chain: llama.cpp → Ollama → OpenAI.
+
+Logging: Send errors (no secrets) to Sentry; log failovers and latency metrics.
+
+Data privacy: Treat resume/personal data as PII. Map storage and deletion flows; document GDPR/SOC2 controls in docs/SECURITY.md.
+
+5 — Gemini CLI: rules, memory, and safe defaults
+.gemini/settings.json (recommended)
+{
+  "contextFileName": "GEMINI.md",
+  "safetyLevel": "BLOCK_HIGH",
+  "autoAccept": false,
+  "checkpointing": { "enabled": true },
+  "excludeTools": ["run_shell_command", "write_file"],
+  "mcpServers": {
+    "portfolio-mcp": {
+      "command": "node",
+      "args": ["mcp/server.ts"],
+      "cwd": "./",
+      "timeout": 10000,
+      "trust": false
+    }
+  }
+}
+
+GEMINI.md (policy + short memory)
+# GEMINI Project Memory & Rules
+
+Stack: Next.js (OpenNext) + Cloudflare Pages/Workers, llama.cpp (GGUF) in container, Ollama fallback, OpenAI cloud.
+
+Rules:
+- NEVER store secrets in memory or files.
+- Always validate diffs before applying.
+- Use `mcp/server.ts` to discover tools (project_search, resume_extract).
+- Use fallback logic: llama -> ollama -> openai.
+- Use /api/health for deployment health-checks.
+
+Memory facts:
+- Local llama base URL: http://localhost:8000/v1
+- Health endpoint: /api/health
+- Preferred model: gemma-3-270m-it-GGUF
+
+
+Operational policy: Gemini can propose patches, but human must review and commit. In CI, run Gemini read-only audits only (no auto-apply).
+
+6 — How to get Gemini (and agents) to read your project docs, images, and PDFs
+
+Gemini CLI and other agent tools can ingest repo content — but you must give it accessible content and explicit instructions to parse non-text files.
+
+Recommended flow (reproducible & auditable)
+
+Store assets in repo: Put docs, diagrams, PDFs, and images under docs/assets/ (or public/_docs/).
+
+Convert heavy PDFs to text/Markdown: Add scripts/convert-pdfs.sh to convert PDFs → Markdown using pandoc or Tesseract OCR where necessary (examples below). Keep source PDFs but store converted text in docs/processed/.
+
+# example: batch conversion
+mkdir -p docs/processed
+for f in docs/assets/*.pdf; do
+  pandoc "$f" -f pdf -t markdown -o "docs/processed/$(basename "$f" .pdf).md"
+done
+
+
+(If PDFs are scanned, run tesseract OCR first.)
+
+For diagrams/images:
+
+Add an alternate text (alt) and a short caption file (e.g. diagram1.caption.md) describing the image content and intent.
+
+If the diagram is Mermaid, include the .mmd or inline Mermaid code in a .md file so Gemini can parse the logic rather than try to OCR the image.
+
+Use Gemini file tools (examples; run locally):
+
+Read a single file: gemini read_file --path ./docs/processed/resume.md
+
+Read many files: gemini read_many_files --paths ./docs/processed/*.md → outputs aggregated plaintext or JSON.
+
+If Gemini offers a screenshot/pdf page tool (depends on your version), use it to snapshot pages: gemini screenshot --path ./docs/assets/whitepaper.pdf --pageno 1 (where available).
+
+Index vs full-text: For large docs, create summaries and small indices: docs/processed/README_SUMMARY.md (one-paragraph per doc) and a docs/index.json with title / path / summary for fast lookup.
+
+Automate ingestion: Add a script scripts/gemini_ingest.sh that runs conversions and then calls Gemini’s read_many_files so your CLI knowledge is up-to-date.
+
+Do NOT store secrets in converted files. Mask credentials before conversion.
+
+Note: some Gemini versions support read_many_files and save_memory() functions. If yours does, use save_memory to add high-value facts (e.g., “Preferred model: gemma-3-270m-it-GGUF”) — but never store secrets there.
+
+7 — Production wiring: model hosting & proxy (implementation logic)
+
+Host llama.cpp / llama-cpp-python server inside a Docker container on a VM (or managed container platform). It exposes an OpenAI-compatible HTTP API (llama-cpp-python has one). 
+llama-cpp-python.readthedocs.io
+
+Ollama can run locally and also exposes an OpenAI-compatible endpoint — use this as the second fallback. 
+Ollama
+
+Edge proxy (Next.js route) must: validate payload → rate limit → try local model → if fail, try Ollama → if fail, call OpenAI cloud → stream response back to client. Keep logic thin on the edge; orchestration happens in agents/service containers.
+
+Proxy skeleton (edge): app/api/chat/route.ts — validate with zod, rateLimit(req.ip), callWithRetryAndCircuit(urls[], payload), stream result to client.
+
+Model priorities:
+[llama.cpp container at LLAMA_CPP_BASE_URL] → [Ollama at OLLAMA_BASE_URL] → [OpenAI cloud].
+
+8 — MCP (Model Context Protocol) tool registry (how agents call tools)
+
+Build MCP servers using the official TypeScript SDK or Cloudflare Agents agents package; register tools project_search, notion_latest, resume_extract_skills. 
+GitHub
+Cloudflare Docs
+
+Agents call MCP tools via the MCP client. Keep MCP behind auth; allow only trusted agent clients. Cloudflare has guides to host remote MCP servers and integrate them. 
+The Cloudflare Blog
+
+MCP pattern:
+
+Agent receives query
+
+If retrieval needed → mcp.call("project_search", { query }) → get back structured JSON (title, link, score)
+
+Build context → call LLM with context → return final answer
+
+9 — CI/CD & health checks (how Gemini should expect deployments)
+
+CI gates (GitHub Actions): lint → typecheck → unit tests (Jest) → integration tests (docker compose runs llama + mcp + agent; run API tests hitting /api/chat + /api/health) → build:cf (OpenNext) → deploy to preview → run post-deploy curl /api/health.
+
+Sentry: upload source maps during CI build using Sentry CLI (use SENTRY_AUTH_TOKEN in secrets). 
+docs.sentry.io
+
+Deploy: opennextjs-cloudflare build && opennextjs-cloudflare deploy (use wrangler.toml with nodejs_compat flag). OpenNext + Cloudflare docs are the canonical source. 
+opennext.js.org
+GitHub
+
+10 — Operational checklist (post-deploy)
+
+health check (/api/health) OK → smoke pass
+
+check Sentry for recent exceptions → none new
+
+check metrics: model latency, failover count, error rate
+
+enable canary → promote to main only after preview passes for N hours
+
+rotate keys if any leak suspicion
+
+11 — How to use Gemini safely with this repo (quick workflow)
+
+git switch -c feature/xyz
+
+npx @google/gemini-cli (or run installed binary) — Gemini reads GEMINI.md + .gemini/settings.json.
+
+Ask Gemini: “Create a circuit-breaker wrapper for /lib/ai/circuit.ts and add tests.”
+
+Gemini shows a patch → review diff → accept or edit → commit via PR.
+
+Run GitHub Actions; verify preview build & health.
+
+Merge only after preview & tests pass.
+
+12 — Files / commands to add now (copy/paste quickstart)
+
+.env.example (commit this)
+
+OPENAI_API_KEY=
+PINECONE_API_KEY=
+PINECONE_INDEX=
+NOTION_API_KEY=
+NOTION_DATABASE_ID=
+LLAMA_CPP_BASE_URL=http://localhost:8000/v1
+LLAMA_API_KEY=secret
+OLLAMA_BASE_URL=http://localhost:11434/v1
+SENTRY_DSN=
+CF_API_TOKEN=
+CF_ACCOUNT_ID=
+
+
+Conversion script (docs/scripts/convert-pdfs.sh)
+
+#!/usr/bin/env bash
+mkdir -p docs/processed
+for f in docs/assets/*.pdf; do
+  out="docs/processed/$(basename "$f" .pdf).md"
+  pandoc "$f" -f pdf -t markdown -o "$out" || echo "pandoc failed, trying OCR"
+  if [ ! -s "$out" ]; then
+    tmptxt="/tmp/$(basename "$f" .pdf).txt"
+    pdftotext "$f" "$tmptxt" && pandoc "$tmptxt" -t markdown -o "$out"
+  fi
+done
+
+
+Gemini ingest (docs/scripts/gemini_ingest.sh)
+
+#!/usr/bin/env bash
+./docs/scripts/convert-pdfs.sh
+npx @google/gemini-cli read_many_files --paths ./docs/processed/*.md --output ./docs/processed/ingest-output.json
+# optionally feed summaries into save_memory via the CLI
+
+13 — Jest & Cypress integration notes (you said they’re added)
+
+Jest: unit test lib/ai/* services. Mock OpenAI / llama responses. Add npm run test:unit in CI before build.
+
+Cypress: E2E on preview env; in CI run after deploy to preview. Add npm run test:e2e job that runs against https://preview-<sha>.workers.dev.
+
+Include resiliency tests: simulate model-down (stop llama container) → assert fallback chain triggers and user gets result.
+
+14 — Canonical links & references (authoritative docs)
+
+Cloudflare Wrangler configuration (containers & wrangler config). 
+Cloudflare Docs
+
+OpenNext (Cloudflare adapter) — deploy Next.js to Cloudflare. 
+opennext.js.org
+
+llama-cpp-python: OpenAI-compatible server for GGUF models (how to run). 
+llama-cpp-python.readthedocs.io
+
+Cloudflare blog: remote MCP servers & Cloudflare agents for MCP. 
+The Cloudflare Blog
+
+Model Context Protocol — TypeScript SDK (MCP server SDK). 
+GitHub
+
+LangChain AgentExecutor & LangGraph docs (agents how-to). 
+LangChain
+Langchain
+
+Sentry Next.js source maps & release upload. 
+docs.sentry.io
+
+Pinecone guides (embedding & index). 
+Pinecone Docs
+
+15 — Human TL;DR for daily use (keep this in your dev brain)
+
+Use Gemini to draft, test, and propose diffs — never auto-apply to main.
+
+Run model servers in Docker on a VM (or local laptop for dev). Don’t try to run native inference in Workers.
+
+Edge keeps it small: validate → proxy → stream. Orchestration and heavy logic live in containerized agent services.
+
+Automate healthchecks, sourcemaps, and pre-merge CI gates. If the health check fails, do not promote.
+
+16 — Next steps I can produce immediately (pick one)
+
+A. Generate the entire docs/ folder (ARCHITECTURE.md, SECURITY.md, CI_CD.md, plus this GEMINI file) — ready to commit.
+
+B. Generate docker-compose.dev.yml, mcp/server.ts, and app/api/chat/route.ts with tests (Jest) and E2E Cypress job in GH Actions.
+
+C. Generate .gemini/settings.json + GEMINI.md + docs/scripts/* ingestion scripts ready for Gemini usage.
+
+
+
+
+
+
+
+ AI-Portfolio — Operational Playbook & Gemini Context
+
+(Production-ready roadmap, security rules, MCP/agent guidance, and Gemini instructions — drop this into GEMINI.md or docs/PROJECT_CONTEXT.md)
+
+Short: this doc teaches Gemini (and your team) how to act on the repo: what’s allowed, how tools behave, security constraints, how to read your files (PDFs/images), and the production-ready runbook. Use this as the canonical project memory & ruleset.
+
+Table of contents
+
+Project one-liner
+
+How Gemini should behave (policies & rules)
+
+Architecture summary (high level)
+
+MCP server — stateless vs stateful patterns
+
+LLM runtime & fallback logic (llama.cpp, Ollama, OpenAI)
+
+Files, images & PDFs — how to get Gemini to see them
+
+Security & compliance rules (SSL, RSL, XSS, DDoS, API Gateway, rate limits, secrets)
+
+CI / testing (Jest + Cypress + integration)
+
+Observability, health checks & self-healing
+
+Deployment & CI/CD specifics (Cloudflare + OpenNext + Wrangler + Docker)
+
+Practical commands & snippets for Gemini CLI and devs
+
+Appendices: links + references
+
+✅ Task list, 📂 Folder structure, 🔁 Sprint model, 🧠 Architecture
+
+1) Project one-liner
+
+Next.js App Router portfolio with an AI career-coach built on LangChain/LangGraph, local LLM fallback (Gemma → llama.cpp / Ollama), vector search (Pinecone), Notion CMS, MCP tools for agent tooling, deployed via Cloudflare Pages/Workers with GitHub Actions — production hardened with circuit breakers, rate limits, WAF, and Sentry.
+
+2) How Gemini should behave — policies & rules (copy into .gemini/settings.json + GEMINI.md)
+
+Non-negotiable policy summary (Gemini must enforce):
+
+safetyLevel: BLOCK_HIGH — block risky ops.
+
+autoAccept: false — never auto-commit changes without human review.
+
+forbid: running shell commands and writing files in CI. (Allow in local interactive mode only.)
+
+mcpServers entry: the local MCP server should be known to Gemini so tools are discoverable.
+
+do_not_store_secrets_in_memory: secrets must not be saved to memory or GEMINI.md.
+
+checkpointing: enabled for every multi-file edit.
+
+review_patch_required: every code change must be made as a PR with a human-written description.
+
+Short natural language rules for Gemini (put in GEMINI.md):
+
+Prefer local inference (llama.cpp) only in dev or private infra.
+
+If making changes to /app/api/*, include tests (Jest) and run npm run test locally before proposing a PR.
+
+If a code edit touches security logic (rate limits, auth, headers), add SECURITY.md tests and a short reasoning note.
+
+Never store API keys or private tokens in repo; use env and GH Secrets.
+
+3) Architecture summary (copy into docs/ARCHITECTURE.md)
+flowchart TD
+  Browser --> Cloudflare[Cloudflare Pages / OpenNext]
+  Cloudflare --> EdgeAPI[/app/api/chat/ (Next.js route)]
+  EdgeAPI -->|proxy| Llama[llama.cpp (container/VM)]
+  EdgeAPI -->|fallback| Ollama[Ollama runtime (container/VM)]
+  EdgeAPI -->|fallback| OpenAI[OpenAI cloud]
+  Llama --> MCP[MCP server (tools: project_search, resume_extract)]
+  MCP --> Pinecone[Pinecone Vector DB]
+  MCP --> Notion[Notion API]
+  Observability[Sentry] -. logs .-> EdgeAPI
+  Observability -. logs .-> Llama
+
+
+Key runtime decisions
+
+Next.js (OpenNext) on Cloudflare serves static & edge API routes.
+
+Heavy inference runs in Docker containers or VMs; workers proxy to them.
+
+Agents (LangChain/LangGraph) call MCP tools via HTTP/SDK. MCP can be stateless or stateful (see below).
+
+4) MCP server — stateless vs stateful (patterns + implementation notes)
+Stateless MCP server (simple, recommended default)
+
+Each tool is a pure function: input → side effects → output.
+
+No persistent memory in the MCP server: caching may be external (Redis/KV).
+
+Pros: easy to scale, simple security model, ideal for Cloudflare Workers/MCP.
+
+When to use: project_search (Pinecone query), notion_latest, resume_extract_skills.
+
+Implementation tip: Use @modelcontextprotocol/typescript-sdk and return JSON results. Keep each tool’s schema strict.
+
+Stateful MCP server (advanced)
+
+Remember past calls, maintain a “game state”, cache API responses, or provide a history for agents.
+
+Store state in a durable store (Postgres, Redis, Pinecone metadata, or Cloudflare Durable Objects).
+
+Pros: enables richer tools (resume review sessions, long-lived game state).
+
+Cons: adds complexity (transactions, caching invalidation, auth model).
+
+Implementation pattern for stateful tools
+
+Use a DB (or Durable Objects) keyed by sessionId or toolInvocationId.
+
+Expose APIs: POST /tool/{name}/invoke with optional sessionId.
+
+Keep idempotency and audit trail — every tool call must produce an audit record (who, when, input, output).
+
+Example tool types to offer
+
+project_search (stateless) → queries Pinecone; returns top-K metadata.
+
+resume_extract_skills (stateless) → returns skill list.
+
+session_game (stateful) → stores moves in Durable Objects or Redis.
+
+5) LLM runtime & fallback logic (production recipe)
+
+Order of preference:
+
+Local llama.cpp server (Gemma 3 270M — GGUF) — fastest private fallback.
+
+Ollama runtime (larger local models if available).
+
+OpenAI cloud (GPT) — fallback and scale.
+
+Proxy pattern (edge route):
+
+Validate inputs with zod.
+
+Rate-limit per-IP (Durable Object / Upstash).
+
+Circuit-breaker + retries: try local llama (3 attempts w/ exp backoff), if fails -> Ollama, then -> OpenAI.
+
+Log failover events to Sentry and increment metric llm.failover.
+
+Streaming
+
+If model supports streaming, pass underlying stream through the Next.js route to the client (ReadableStream). Use chunk parsing and Sentry breadcrumbing.
+
+6) Files, images & PDFs — how to get Gemini (and agents) to see them
+Gemini CLI — reading project files & images
+
+Text-based docs: gemini read_file --path docs/ARCHITECTURE.md or gemini read_many_files --paths "docs/**/*.md".
+
+PDFs → convert (preferred): convert PDFs to Markdown or plain text and commit processed outputs to docs/processed/ so Gemini can read them easily:
+
+Tools: pdfjs for structured PDFs, pdftotext or pdf2md for plain text; for scanned PDFs use tesseract OCR.
+
+Example pipeline:
+
+mkdir -p docs/processed
+pdftotext docs/resume.pdf docs/processed/resume.txt
+pandoc docs/processed/resume.txt -o docs/processed/resume.md
+
+
+Then gemini read_file --path docs/processed/resume.md
+
+Images (UI mockups):
+
+Provide an alt-text and short writeup next to the image in Markdown: images/hero.png → images/hero.png.caption.md with a textual description.
+
+For diagrams, put the source mermaid file in docs/diagrams/diagram.mmd and commit it. Gemini will read that text.
+
+For screenshots with text, OCR and include extracted text as .txt.
+
+Automate ingestion:
+
+Add scripts/process_files.sh that generates docs/processed/* and commit that output to a branch for Gemini to read.
+
+When adding a new PDF/image, run npm run process-docs (add script in package.json).
+
+Index for quick lookup:
+
+Keep a docs/INDEX.md with bullets referencing file paths and short descriptions. Gemini will scan this first.
+
+Why this works: Gemini (and most LLM agents) work best on text. Converting visual docs to text and providing descriptive metadata yields accurate understanding and traceable context.
+
+7) Security & compliance rules (production checklist)
+Network & perimeter
+
+Enforce TLS 1.2+ for all endpoints (Cloudflare TLS).
+
+API Gateway (Cloudflare Access / API Gateway) in front of model hosts. Use mTLS or short-lived API tokens.
+
+Authentication & Authorization
+
+Protect admin/model endpoints via Cloudflare Access + service tokens.
+
+For user endpoints, prefer JWT (short-lived) with scopes.
+
+Input sanitation & XSS/CSRF
+
+Sanitize all user input server-side prior to embedding in prompts. Use strict escaping on HTML output.
+
+Use CSP headers and X-Frame-Options: DENY. Implement CSRF tokens for form posts (or use same-site cookies).
+
+Rate-limits & DDoS
+
+Edge rate-limits in Cloudflare + app-level sliding window (Durable Objects/Redis).
+
+WAF rules to block common attack patterns and bot traffic.
+
+Secrets & Key Management
+
+Never commit secrets. Use GH Secrets for CI and Cloudflare environment variables for runtime. Rotate keys regularly (quarterly or on suspicion).
+
+Use short-lived tokens between services where feasible (OIDC, ephemeral keys).
+
+Logging, tracing, & PII
+
+Log only metadata. Strip PII before sending to Sentry.
+
+Maintain an audit trail for all tool calls and token usage.
+
+Map data flows for GDPR: identify data controllers/processors, retention policies, and data deletion endpoints.
+
+OWASP, SOC2, GDPR
+
+Implement OWASP Top 10 mitigations (input validation, auth, sensitive data exposure, etc.).
+
+SOC2 controls: change control (CI/CD logs), access control, incident response (Sentry alerts), and encrypted backups.
+
+GDPR: data minimization, user consent, data deletion endpoint, and a DPA with third-party providers.
+
+8) CI / testing (you already have Jest + Cypress; make them count)
+Unit tests (Jest)
+
+Mock network & LLM calls (use nock or jest fetch mocks).
+
+Test route input validation, rate-limit logic, circuit-breaker logic.
+
+Integration tests
+
+docker compose -f docker-compose.dev.yml up --build -d to run llama + mcp + agent.
+
+Integration suite hits /api/chat and /api/health and asserts fallbacks, streaming behavior, and rate-limit.
+
+E2E tests (Cypress)
+
+Test happy paths: chat flow, project browsing, resume upload, theme toggle.
+
+Add synthetic test to simulate llama failure and confirm fallback to OpenAI.
+
+CI pipeline (gates)
+
+Steps: lint -> typecheck -> jest unit -> build -> integration tests (in container) -> cypress e2e -> deploy-preview -> post-deploy healthcheck -> promote.
+
+Fail early and require human review if healthcheck fails.
+
+9) Observability, health checks & self-healing
+Health endpoint
+
+/api/health returns aggregated status of: llama, ollama, pinecone reachable, notion reachable. Health is used in CI post-deploy.
+
+Metrics & Alerts
+
+Track: latency, error rate, failover count, rate-limit hits, model memory/cpu usage.
+
+Use Sentry for errors and tracing; Cloudflare analytics for edge traffic. Hook alerts into Slack or PagerDuty.
+
+Self-healing primitives
+
+Circuit-breaker that temporarily disables local model calls after repeated failures for a short cooldown.
+
+Automatic fallback to next available model.
+
+Feature-flag FEATURE_AI_CHAT=false to instantly turn off AI surface.
+
+10) Deployment & CI/CD specifics (summary + commands)
+
+OpenNext + Cloudflare
+
+wrangler.toml and open-next.config.ts (use nodejs_compat flag).
+
+Scripts:
+
+"scripts": {
+  "dev": "next dev",
+  "preview:cf": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+  "deploy:cf": "opennextjs-cloudflare build && opennextjs-cloudflare deploy"
+}
+
+
+Model containers
+
+Dockerize llama-cpp-python / Ollama / MCP server. Push images to GHCR in CI.
+
+Use a private VM or managed container host for inference (DO, Fly, Render, Cloud Run). Use internal networking and restrict access.
+
+GitHub Actions snippet (health gated)
+
+Build app, build/push model images, deploy preview, run post-deploy healthcheck; only promote after green.
+
+11) Practical commands & snippets for Gemini CLI and devs
+Add Gemini files (example)
+
+.gemini/settings.json (safe defaults):
+
+{
+  "contextFileName": "GEMINI.md",
+  "safetyLevel": "BLOCK_HIGH",
+  "autoAccept": false,
+  "checkpointing": { "enabled": true },
+  "excludeTools": ["run_shell_command", "write_file"],
+  "mcpServers": {
+    "portfolio-mcp": {
+      "command": "node",
+      "args": ["mcp/server.ts"],
+      "cwd": "./",
+      "timeout": 10000,
+      "trust": false
+    }
+  }
+}
+
+
+GEMINI.md (seed)
+
+# GEMINI memory for AI-portfolio
+Stack: Next.js App Router, OpenNext/Cloudflare, llama.cpp (Gemma 270M), Ollama, OpenAI fallback, Pinecone, Notion, LangGraph/LangChain, MCP tools
+
+Rules:
+- No secrets in memory.
+- All code edits produce PRs.
+- Rate limiting: default 30 req/min per IP (edge-config).
+- Fallback chain: llama -> ollama -> openai.
+
+How to feed PDFs/images to Gemini
+
+Convert PDFs to text via pdftotext or pdfjs:
+
+pdftotext docs/resume.pdf docs/processed/resume.txt
+pandoc docs/processed/resume.txt -o docs/processed/resume.md
+
+
+OCR images with Tesseract if text is in image:
+
+tesseract images/hero.png images/hero.txt
+
+
+Run Gemini read:
+
+gemini read_file --path docs/processed/resume.md
+gemini read_many_files --paths "docs/processed/**/*.md"
+
+
+Add captions .caption.md next to images for context.
+
+Run local dev with Docker compose
+cp .env.example .env.local
+docker compose -f docker-compose.dev.yml up --build
+npm run dev
+
+12) Appendices: links & docs (paste directly into docs/REFERENCES.md)
+
+Cloudflare Workers Wrangler containers: https://developers.cloudflare.com/workers/wrangler/configuration/#containers
+
+Cloudflare MCP docs: https://developers.cloudflare.com/agents/model-context-protocol/mcp-servers-for-cloudflare/
+
+OpenNext (Cloudflare + Next.js): https://opennext.js.org/cloudflare/
+ / https://developers.cloudflare.com/workers/framework-guides/web-apps/nextjs/
+
+llama-cpp-python server docs (GGUF, OpenAI-compatible): https://llama-cpp-python.readthedocs.io/en/latest/server/
+
+Next.js App Router & Turbopack: https://nextjs.org/docs/
+ (see App Router + Turbopack)
+
+LangChain docs (JS & Py): https://langchain.com/docs/
+
+Pinecone: https://www.pinecone.io/docs/
+
+Notion API: https://developers.notion.com/
+
+Sentry Next.js: https://docs.sentry.io/platforms/javascript/guides/nextjs/
+
+OWASP Top 10: https://owasp.org/www-project-top-ten/
+
+13) Final deliverables (your preferred format)
+✅ Task list (prioritized)
+
+Add GEMINI.md and .gemini/settings.json (safe defaults).
+
+Add /app/api/health and /app/api/chat edge route with zod validation + fallback proxy skeleton.
+
+Add docker-compose.dev.yml for local llama/Ollama + MCP.
+
+Implement MCP server tools (stateless first): project_search, resume_extract_skills, notion_latest.
+
+Add retry/circuit utilities, rate-limiter (Durable Objects or Upstash in prod).
+
+Configure Sentry & source map upload in CI.
+
+Add Jest unit tests and integration tests that run in CI with local containers. Add Cypress E2E tests.
+
+Build GitHub Actions: build app, run tests, build/push model images, deploy preview to Cloudflare, run post-deploy healthcheck.
+
+Harden Cloudflare: WAF, rate-limits, Access for model admin endpoints.
+
+Add SECURITY.md with SOC2/GDPR mapping and runbook.
+
+📂 Folder structure (minimal additions)
+/app/api/
+  ├─ chat/route.ts
+  └─ health/route.ts
+/mcp/
+  └─ server.ts
+/docker/
+  ├─ llama/Dockerfile
+  └─ ollama/Dockerfile (optional)
+/docs/
+  ├─ ARCHITECTURE.md
+  ├─ SECURITY.md
+  └─ REFERENCES.md
+/.gemini/settings.json
+/GEMINI.md
+/docker-compose.dev.yml
+/.github/workflows/deploy.yml
+/.env.example
+
+🔁 Sprint model (one-week micro-sprints)
+
+Sprint 0 (0.5d) — Add GEMINI.md & .gemini settings; seed memory and rules.
+
+Sprint 1 (1d) — Docker compose + containerize llama/Ollama + run local MCP.
+
+Sprint 2 (1d) — Edge /api/chat proxy + /api/health + unit tests.
+
+Sprint 3 (1d) — MCP stateless tools + agent skeleton + integration tests.
+
+Sprint 4 (1d) — CI: build, test, preview deploy; Sentry & source maps.
+
+Sprint 5 (1d) — Resilience tests, rate-limiting, WAF configs, docs & SOC2/GDPR checklist.
+
+Sprint 6 (0.5d) — Stress test, canary, enable feature flag for main.
+
+🧠 Architecture (one-liner)
+
+Next.js (OpenNext) runs on Cloudflare Pages/Workers as the control plane and edge, forwarding validated requests to containerized model hosts (llama.cpp / Ollama) and MCP tools that query Pinecone/Notion; observability + healthchecks + circuit-breakers ensure resilient, production-grade behavior.
+
+
+
+
+
+production-ready GEMINI_OPERATIONS.md blueprint that:
+
+Captures all our plans, rules, and architecture
+
+Points Gemini (and any teammate) to the right docs
+
+Locks in security standards (so no cowboy commits)
+
+Explains how Gemini can read code/docs/images/pdfs
+
+Covers MCP server modes (stateless vs agentic)
+
+Here’s the full Markdown you can drop into your repo (alongside README.md and docs/), so Gemini CLI always has the context + safe rails.
+
+🌌 GEMINI OPERATIONS PLAYBOOK
+
+Centralized rules, security practices, and workflows for using Gemini CLI + AI Portfolio tech stack in production.
+This doc ensures devs and AI assistants operate within safe, consistent, and ROI-first guidelines.
+
+📖 Table of Contents
+
+Core Rules
+
+Security Standards
+
+Architecture & Tech Stack
+
+Gemini CLI Usage
+
+MCP Server Strategy
+
+Docs & References
+
+Media & Context Handling
+
+Testing & QA
+
+🎯 Core Rules
+
+Manual Review Always: Gemini cannot auto-commit or run shell commands in prod pipelines.
+
+No Secrets in Memory: API keys, tokens, and credentials must live in GitHub Secrets or Cloudflare env vars.
+
+Strict Context Control: Gemini reads from GEMINI.md, .gemini/settings.json, and docs/ — not external secrets.
+
+Circuit Breakers: All AI orchestration (LangGraph/Executor) follows fallback order:
+Local Llama.cpp → Ollama → OpenAI → Error.
+
+Fail-Safe Principle: If an agent/tool fails, system falls back to human or default response.
+
+🛡 Security Standards
+
+Military-grade 🪖 by default:
+
+Transport: Force HTTPS/TLS everywhere (SSL certs).
+
+Endpoints: All /api/* routes behind Cloudflare API Gateway.
+
+Rate Limits: Per-IP throttling, token bucket (burst) control.
+
+XSS & Injection: Strict Content-Security-Policy, sanitize inputs via Zod validators.
+
+DoS/DDOS: Cloudflare WAF, circuit-breakers on LLM calls.
+
+Secrets: No plaintext storage. Use .env.local (local) + GH/Cloudflare secrets (prod).
+
+Observability: Sentry logging, health endpoint /api/health, structured logs.
+
+🧩 Architecture & Tech Stack
+High-Level Flow
+flowchart TD
+  subgraph Client[Next.js + ShadCN UI]
+    A[Portfolio UI] --> B[Chat UI]
+  end
+
+  B -->|API call| C[/api/chat Next.js Route]
+
+  subgraph Server[Backend Logic]
+    C --> D[LangGraph Agent Executor]
+    D -->|tools| E[MCP Server (stateless or agentic)]
+    D --> F[Vector DB: Pinecone]
+    D --> G[Notion API]
+  end
+
+  subgraph Models[AI Engines]
+    D --> H[Llama.cpp (Gemma 3 270m GGUF)]
+    H --> I[Ollama]
+    I --> J[OpenAI API]
+  end
+
+  subgraph Infra[Deployment]
+    Client --> Cloudflare[Cloudflare Pages/Workers]
+    Server --> Docker[Docker Containers / VMs]
+  end
+
+🤖 Gemini CLI Usage
+Safe Config
+
+.gemini/settings.json:
+
+{
+  "contextFileName": "GEMINI.md",
+  "safetyLevel": "BLOCK_HIGH",
+  "checkpointing": { "enabled": true },
+  "autoAccept": false,
+  "excludeTools": ["run_shell_command", "write_file"]
+}
+
+Context Memory
+
+Project facts live in GEMINI.md (stack, endpoints, fallback rules).
+
+Docs in /docs/ — Gemini is pointed here (read_file, read_many_files).
+
+Memory commands:
+
+Add fact: /memory add "health endpoint is /api/health"
+
+Save facts: save_memory(fact="Use circuit breaker on LLM chain")
+
+Workflow
+
+Run npx @google/gemini-cli in repo root.
+
+Ask Gemini for refactor/test/doc updates.
+
+Review generated diffs manually.
+
+Commit with human-written messages.
+
+🛠 MCP Server Strategy
+
+Your MCP server can be:
+
+Stateless Tool Registry (simpler)
+
+Exposes tools like searchPinecone, fetchNotionPages, summarizePDF.
+
+No memory/state, just API wrappers.
+
+Agentic Server (advanced)
+
+Remembers prior calls (like a mini LangGraph node).
+
+Can cache API calls or run a game/stateful app.
+
+Behaves like a lightweight agent, but still tool-driven.
+
+📦 Use @modelcontextprotocol/typescript-sdk (TS) or mcp-server (PY) to implement.
+For AI Portfolio, start stateless, then extend to agentic if caching/memory is needed.
+
+
+
+
+
+
+
+Summarize all plans we’ve made (Gemini CLI use, MCP servers, LangGraph/LangChain, security practices).
+
+Include links to official docs so Gemini can crawl them when asked.
+
+Define rules + instructions so Gemini doesn’t go rogue.
+
+Cover how Gemini can read your project docs, PDFs, and images.
+
+Bake in test strategy (Jest + Cypress).
+
+📖 AI Portfolio – System Design & Gemini CLI Protocol
+🎯 Core Creed
+
+"I don’t build apps. I deploy weapons of ROI."
+
+This repo is an AI-powered portfolio with a self-learning career coach chatbot, built on Next.js + LangChain/LangGraph + MCP tools and deployed via Cloudflare Pages.
+
+🧠 Architecture Overview
+
+Frontend: Next.js 14 (TypeScript, Tailwind, ShadCN UI)
+
+AI Orchestration: LangChain Agent Executor + LangGraph flows
+
+Models:
+
+Primary: gemma-3-270m-it-GGUF (via llama.cpp)
+
+Secondary: Ollama (local fallback)
+
+Cloud fallback: OpenAI GPT-4
+
+Storage: Pinecone (vectors), Notion API (CMS)
+
+Infra: Cloudflare Pages + Workers (API routes), GitHub Actions CI/CD
+
+Observability: Sentry, Guardrails, Feature Flags
+
+MCP: Tools exposed via @modelcontextprotocol/typescript-sdk
+
+🔗 System Diagram
+flowchart TD
+    UI[Next.js UI] --> API[/api/chat route]
+    API -->|LangGraph| Agent[LangChain Agent Executor]
+    Agent -->|MCP Tool Calls| MCPServer[MCP Server (TS/PY)]
+    MCPServer -->|llama.cpp| GemmaModel[Gemma-3-270m-it-GGUF]
+    MCPServer --> Ollama[Ollama Local Model]
+    MCPServer --> OpenAI[OpenAI GPT-4 Cloud]
+    Agent --> Pinecone[Vector DB]
+    Agent --> Notion[CMS]
+    API --> Sentry[Monitoring/Guardrails]
+    GitHub[GitHub Actions] --> Deploy[Cloudflare Pages/Workers]
+
+🔐 Security Standards (Military-Grade 🪖)
+
+Every route, agent, and MCP tool must enforce:
+
+✅ SSL Everywhere (HTTPS only via Cloudflare)
+
+✅ Rate Limiting (Cloudflare Gateway → API routes)
+
+✅ Circuit Breaker + Fallback Chain:
+llama.cpp → Ollama → OpenAI
+
+✅ XSS Protection: sanitize all user input (DOMPurify)
+
+✅ DoS Protection: worker KV-cache + request caps
+
+✅ API Gateway Proxy: all LLM API calls proxied, never exposed
+
+✅ Secrets Management: use GitHub Secrets + Cloudflare Env, never commit
+
+✅ Sentry Observability: auto-log errors, block sensitive info
+
+📚 References:
+
+Cloudflare API Gateway
+
+OWASP XSS Prevention Cheat Sheet
+
+LangChain Security
+
+🛠️ MCP Server Patterns
+
+You can build MCP servers that:
+
+Are stateless: tools only (e.g., pdf_reader, vector_lookup).
+
+Are agentic: remember past tool calls, cache API responses, maintain game state, etc.
+
+📚 References:
+
+Model Context Protocol – TypeScript SDK
+
+LangGraph Docs
+
+🧪 Testing Strategy
+
+Unit Tests: Jest (logic, API routes, LangChain nodes)
+
+E2E Tests: Cypress (UI + chatbot flow)
+
+Load Tests: k6 or artillery (ensure DoS safety)
+
+📚 References:
+
+Jest Docs
+
+Cypress Docs
+
+🤖 Gemini CLI Ruleset
+
+Gemini CLI is your co-pilot, not prod deployer.
+
+Context stored in GEMINI.md
+
+Safe defaults in .gemini/settings.json
+
+No direct shell/file writes in CI — interactive review only
+
+Example .gemini/settings.json:
+
+{
+  "contextFileName": "GEMINI.md",
+  "safetyLevel": "BLOCK_HIGH",
+  "checkpointing": { "enabled": true },
+  "autoAccept": false,
+  "excludeTools": ["run_shell_command", "write_file"]
+}
+
+
+Example GEMINI.md snippet:
+
+# GEMINI Context
+
+Preferred model: gemma-3-270m-it-GGUF via llama.cpp.  
+Fallback order: Ollama → OpenAI GPT-4.  
+Security rules: SSL, rate limiting, circuit breakers, no secrets in commits.  
+Health endpoint: /api/health  
+
+
+📚 References:
+
+Gemini CLI GitHub
+
+Gemini CLI Memory Docs
+
+📂 Docs, Images, and PDFs in Context
+
+Gemini CLI can’t “see” your screenshots directly, but you can:
+
+Use read_file / read_many_files for Markdown docs (ARCHITECTURE.md, SECURITY.md, etc.).
+
+Convert images to Markdown descriptions (via OCR or manual notes).
+
+Expose PDF parsing tools in MCP (pdf_reader tool using pdf.js or PyPDF).
+
+Store links to diagrams (Mermaid, Excalidraw) in docs/ folder.
+
+This way Gemini can “read” docs as text and integrate them into its reasoning.
+
+🚀 Deployment Workflow
+
+Dev: Run docker compose up (llama.cpp + MCP server).
+
+Use Gemini CLI for assisted coding (npx @google/gemini-cli).
+
+GitHub Actions → lint, Jest, Cypress, build, deploy via OpenNext → Cloudflare Pages.
+
+Preview deploy auto-generated. Manual PR review required.
+
+Merge → production deploy with observability + feature flags enabled.
+
+📚 References:
+
+OpenNext
+
+Cloudflare Pages
+
+Wrangler CLI
+
+✅ Task list:
+
+ Add .gemini/settings.json
+
+ Add GEMINI.md with memory + rules
+
+ Create docs/ARCHITECTURE.md, docs/SECURITY.md, docs/TESTING.md
+
+ Add mcp/server.ts with pdf_reader + vector_lookup tools
+
+ Configure GitHub Actions → Jest + Cypress + deploy
+
+ Configure Cloudflare API Gateway rules + rate limits
+
+📂 Folder structure additions:
+
+/docs
+  ├── ARCHITECTURE.md
+  ├── SECURITY.md
+  ├── TESTING.md
+  ├── LANGCHAIN_AGENTS.md
+/gemini
+  ├── GEMINI.md
+  ├── settings.json
+/mcp
+  ├── server.ts
+
+
+
+
+
+
+@modelcontextprotocol/typescript-sdk
+https://developers.cloudflare.com/agents/model-context-protocol/mcp-servers-for-cloudflare/
+https://developers.cloudflare.com/workers/framework-guides/web-apps/nextjs/
+
+
+Deploy an existing Next.js project on Workers
+You can convert an existing Next.js application to run on Cloudflare
+
+https://nextjs.org/docs/app/api-reference/turbopack#tailwind-css
+
+Version Changes
+Version	Changes
+v15.5.0	Turbopack support for build beta
+v15.3.0	Experimental support for build
+v15.0.0	Turbopack for dev stable
+
+https://nextjs.org/docs/pages/guides/tailwind-v3-css
+https://nextjs.org/docs/pages/guides/environment-variables
+https://nextjs.org/docs/architecture/fast-refresh
+https://nextjs.org/docs/pages/api-reference/config/eslint
+
+Install @opennextjs/cloudflare ↗
+
+npm i @opennextjs/cloudflare@latest
+
+llms.txt
+prompt.txt
+Containers llms-full.txt
+Developer Platform llms-full.txt
+
+
+Add a Wrangler configuration file
+
+In your project root, create a Wrangler configuration file with the following content:
+
+wrangler.jsonc
+wrangler.toml
+  main = ".open-next/worker.js"
+  name = "my-app"
+  compatibility_date = "2025-03-25"
+  compatibility_flags = ["nodejs_compat"]
+  [assets]
+  directory = ".open-next/assets"
+  binding = "ASSETS"
+
+Note
+
+As shown above, you must enable the nodejs_compat compatibility flag and set your compatibility date to 2024-09-23 or later for your Next.js app to work with @opennextjs/cloudflare.
+
+Add a configuration file for OpenNext
+
+In your project root, create an OpenNext configuration file named open-next.config.ts with the following content:
+
+import { defineCloudflareConfig } from "@opennextjs/cloudflare";
+
+export default defineCloudflareConfig();
+
+Note
+
+open-next.config.ts is where you can configure the caching, see the adapter documentation ↗ for more information https://opennext.js.org/cloudflare/caching
+
+Update package.json
+
+You can add the following scripts to your package.json:
+
+"preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+"deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+"cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
+
+Usage
+Develop locally.
+
+After creating your project, run the following command in your project directory to start a local development server. The command uses the Next.js development server. It offers the best developer experience by quickly reloading your app after your source code is updated.
+
+
+npm run dev
+
+Test your site with the Cloudflare adapter.
+
+The command used in the previous step uses the Next.js development server to offer a great developer experience. However your application will run on Cloudflare Workers so you want to run your integration tests and verify that your application works correctly in this environment.
+
+
+npm run preview
+
+Deploy your project.
+
+You can deploy your project to a *.workers.dev subdomain or a custom domain from your local machine or any CI/CD system (including Workers Builds). Use the following command to build and deploy. If you're using a CI service, be sure to update your "deploy command" accordingly.
+
+npm
+Terminal window
+npm run deploy
+
+
+
+
+
+https://developers.cloudflare.com/workers/wrangler/configuration/#containers
+https://developers.cloudflare.com/workers/ci-cd/external-cicd/github-actions/
+https://developers.cloudflare.com/workers/ci-cd/builds/build-image/
+https://nextjs.org/docs/pages/api-reference/config/typescript
+
+getPlatformProxy
+
+Warning
+
+getPlatformProxy is, by design, to be used exclusively in Node.js applications. getPlatformProxy cannot be run 
+inside the Workers runtime.
+
+
+
+
+
+Your MCP server doesn't necessarily have to be an Agent. You can build MCP servers that are stateless, and just add tools to your MCP server using the @modelcontextprotocol/typescript-sdk package.
+
+But if you want your MCP server to:
+
+remember previous tool calls, and responses it provided
+provide a game to the MCP client, remembering the state of the game board, previous moves, and the score
+cache the state of a previous external API call, so that subsequent tool calls can reuse it
+do anything that an Agent can do, but allow MCP clients to communicate with it
+
+
+
+
+📚 Docs & References
+
+Next.js: https://nextjs.org/docs
+
+OpenNext (Cloudflare adapter): https://open-next.js.org
+
+Cloudflare Workers/Pages: https://developers.cloudflare.com/pages
+
+LangChain TS: https://js.langchain.com
+
+LangGraph: https://github.com/langchain-ai/langgraph
+
+MCP Protocol: https://modelcontextprotocol.io
+
+Llama.cpp: https://github.com/ggerganov/llama.cpp
+
+Ollama: https://ollama.ai
+
+Pinecone: https://docs.pinecone.io
+
+Notion API: https://developers.notion.com
+
+Sentry: https://docs.sentry.io
