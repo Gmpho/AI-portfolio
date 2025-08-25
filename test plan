@@ -1,0 +1,32 @@
+you can use both Jest and Cypress in your Next.js + TypeScript portfolio project. They serve different testing purposes and complement each other beautifully:
+
+🧪 Jest – for unit and integration testing Perfect for testing individual components, functions, and logic in isolation.
+
+Example: Test that your AI chatbot component renders correctly and responds to props.
+
+Setup involves installing jest, ts-jest, @testing-library/react, and configuring jest.config.mjs.
+
+bash
+npm install --save-dev jest ts-jest @testing-library/react @testing-library/jest-dom
+🧪 Cypress – for end-to-end (E2E) and component testing Ideal for simulating real user interactions across pages.
+
+Example: Test that a user can navigate from your homepage to the Resume Analyzer and upload a file.
+
+Setup involves installing Cypress and configuring cypress.config.ts.
+
+bash
+npm install --save-dev cypress
+npx cypress open
+⚠️ Heads-up on TypeScript conflicts Since both Jest and Cypress use global types like expect, you’ll want to isolate their type definitions to avoid clashes:
+
+Create separate tsconfig.json files:
+
+tsconfig.jest.json for Jest
+
+tsconfig.cypress.json for Cypress
+
+Use "types": ["jest"] or "types": ["cypress"] in each config to scope properly.
+
+You can check out this GitHub example that shows how to isolate Jest and Cypress types in a shared project.
+
+If you'd like, I can walk you through writing your first test for either one. Want to start with a unit test for your chatbot or an E2E test for your Resume Analyzer flow?
